@@ -21,6 +21,14 @@
     {
       "src": "styles.css",
       "use": "@vercel/static"
+    },
+    {
+      "src": "vasko-icon-192.png",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "vasko-icon-512.png",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
