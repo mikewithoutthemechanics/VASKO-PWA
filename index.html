@@ -47,6 +47,7 @@
         </div>
         <div class="topbar-actions">
           <button class="icon-btn" id="bookmark-btn" title="Bookmark current page">☆</button>
+          <button class="icon-btn" id="config-btn" title="Configure app">⚙️</button>
         </div>
       </div>
       <div class="content-area">
@@ -88,6 +89,63 @@
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <div class="config-modal" id="config-modal">
+    <div class="config-modal-backdrop" id="config-modal-backdrop"></div>
+    <div class="config-modal-content">
+      <div class="config-modal-header">
+        <h2>Configure App</h2>
+        <button class="config-close" id="config-close">×</button>
+      </div>
+      <div class="config-modal-body">
+        <div class="config-section">
+          <h3>Brand</h3>
+          <div class="config-grid">
+            <label>Brand Name<input type="text" id="config-brand-name"></label>
+            <label>Tagline<input type="text" id="config-tagline"></label>
+            <label>Product Name<input type="text" id="config-product-name"></label>
+            <label>Accent Color<input type="color" id="config-accent-color" value="#38bdf8"></label>
+            <label>Icon (emoji)<input type="text" id="config-icon" maxlength="2"></label>
+          </div>
+        </div>
+        <div class="config-section">
+          <h3>Pricing</h3>
+          <div class="config-grid">
+            <label>Currency<input type="text" id="config-currency" placeholder="USD"></label>
+            <label>Symbol<input type="text" id="config-symbol" placeholder="$"></label>
+          </div>
+          <div id="config-pricing-list"></div>
+          <button class="config-add-tier" id="config-add-tier">+ Add Tier</button>
+        </div>
+        <div class="config-section">
+          <h3>Sections</h3>
+          <div id="config-sections-list"></div>
+        </div>
+        <div class="config-section">
+          <h3>Repository</h3>
+          <div class="config-grid">
+            <label>Repo Owner<input type="text" id="config-repo-owner"></label>
+            <label>Repo Name<input type="text" id="config-repo-name"></label>
+            <label>Branch<input type="text" id="config-repo-branch"></label>
+          </div>
+        </div>
+        <div class="config-section">
+          <h3>Contact</h3>
+          <div class="config-grid">
+            <label>Email<input type="email" id="config-email"></label>
+            <label>Phone<input type="tel" id="config-phone"></label>
+            <label>Website<input type="url" id="config-website"></label>
+          </div>
+        </div>
+      </div>
+      <div class="config-modal-footer">
+        <button class="config-btn config-btn-secondary" id="config-export">Export Config</button>
+        <button class="config-btn config-btn-secondary" id="config-import">Import Config</button>
+        <button class="config-btn config-btn-danger" id="config-reset">Reset</button>
+        <button class="config-btn config-btn-primary" id="config-save">Save</button>
+      </div>
+    </div>
+  </div>
 
   <script src="/app.js"></script>
   <script>

@@ -1,10 +1,10 @@
-const GITHUB_API_BASE = 'https://api.github.com/repos/mikewithoutthemechanics/VASKO-SYSTEM/contents';
-const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/mikewithoutthemechanics/VASKO-SYSTEM/master/';
-const CACHE_KEY = 'vasko-cache-v2';
+const GITHUB_BASE = 'https://raw.githubusercontent.com/mikewithoutthemechanics/VASKO-SYSTEM/master/';
+const CONFIG_KEY = 'vasko-config';
+const CACHE_KEY = 'vasko-cache-v3';
 const BOOKMARKS_KEY = 'vasko-bookmarks';
 const THEME_KEY = 'vasko-theme';
 
-const SECTIONS = [
+const DEFAULT_SECTIONS = [
   { id: '01-BRAND', name: 'Brand', icon: '🎯', desc: 'Identity, positioning, messaging' },
   { id: '02-PRICING', name: 'Pricing', icon: '💰', desc: 'Pricing sheets, terms, strategy' },
   { id: '03-SALES', name: 'Sales', icon: '🤝', desc: 'Scripts, decks, objection handling' },
@@ -38,6 +38,38 @@ const SECTION_FILES = {
   '14-MARKET-DATA': ['industry-research-verified-metrics.md']
 };
 
+const DEFAULT_CONFIG = {
+  brand: {
+    name: 'VASKO',
+    tagline: 'Sales & Marketing System',
+    productName: 'Sales System',
+    accentColor: '#38bdf8',
+    icon: '◆'
+  },
+  sections: DEFAULT_SECTIONS.map(s => s.id),
+  pricing: {
+    currency: 'ZAR',
+    symbol: 'R',
+    tiers: [
+      { name: 'Core', monthly: 12500, setup: 5000 },
+      { name: 'Prime', monthly: 22500, setup: 10000 },
+      { name: 'Pro', monthly: 42500, setup: 20000 },
+      { name: 'Elite', monthly: 85000, setup: 50000 }
+    ]
+  },
+  repo: {
+    owner: 'mikewithoutthemechanics',
+    name: 'VASKO-SYSTEM',
+    branch: 'master'
+  },
+  contact: {
+    email: '',
+    phone: '',
+    website: ''
+  }
+};
+
+let config = loadConfig();
 let currentFiles = [];
 let currentPath = '';
 let currentFile = '';
@@ -46,6 +78,37 @@ let isSearching = false;
 let contentEl, loadingStateEl, errorStateEl;
 
 function $(id) { return document.getElementById(id); }
+
+function loadConfig() {
+  try {
+    const saved = localStorage.getItem(CONFIG_KEY);
+    if (saved) return { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
+  } catch {}
+  return { ...DEFAULT_CONFIG };
+}
+
+function saveConfig(newConfig) {
+  config = { ...config, ...newConfig };
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  applyConfig();
+}
+
+function applyConfig() {
+  document.querySelector('.brand-text').textContent = config.brand.name;
+  document.querySelector('.brand-icon').textContent = config.brand.icon;
+  document.querySelector('.tagline').textContent = config.brand.tagline;
+  document.title = config.brand.name;
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', config.brand.accentColor);
+}
+
+function getSections() {
+  return DEFAULT_SECTIONS.filter(s => config.sections.includes(s.id));
+}
+
+function getRepoBase() {
+  const r = config.repo;
+  return `https://raw.githubusercontent.com/${r.owner}/${r.name}/${r.branch}/`;
+}
 
 function showToast(message) {
   const toast = $('toast');
@@ -109,11 +172,12 @@ function toggleTheme() {
 
 async function buildSearchIndex() {
   const index = [];
-  for (const section of SECTIONS) {
+  const sections = getSections();
+  for (const section of sections) {
     const files = SECTION_FILES[section.id] || [];
     for (const file of files) {
       try {
-        const url = `${GITHUB_RAW_BASE}${section.id}/${file}`;
+        const url = `${getRepoBase()}${section.id}/${file}`;
         const cached = localStorage.getItem(`vasko:${section.id}/${file}`);
         let content = cached;
         if (!content) {
@@ -188,7 +252,7 @@ async function loadFiles(sectionId) {
 
 async function loadFile(path) {
   currentFile = path;
-  const url = `${GITHUB_RAW_BASE}${path}`;
+  const url = `${getRepoBase()}${path}`;
   try {
     loadingStateEl.style.display = 'flex';
     errorStateEl.style.display = 'none';
@@ -340,7 +404,8 @@ function updateActiveFile(path) {
 
 function updateBreadcrumb(sectionId, fileName) {
   const bc = $('topbar-breadcrumb');
-  const section = sectionId ? SECTIONS.find(s => s.id === sectionId) : SECTIONS.find(s => s.id === currentPath);
+  const sections = getSections();
+  const section = sectionId ? sections.find(s => s.id === sectionId) : sections.find(s => s.id === currentPath);
   if (!section) return;
 
   let html = `<span class="breadcrumb-item">${section.name}</span>`;
@@ -352,7 +417,8 @@ function updateBreadcrumb(sectionId, fileName) {
 
 function renderSidebar() {
   const container = $('section-list');
-  container.innerHTML = SECTIONS.map(s => `
+  const sections = getSections();
+  container.innerHTML = sections.map(s => `
     <button class="section-item" onclick="loadFiles('${s.id}')" data-section="${s.id}" title="${s.desc}">
       <span class="section-icon">${s.icon}</span>
       <span class="section-name">${s.name}</span>
@@ -405,9 +471,179 @@ async function navigateToResult(sectionId, path) {
   setTimeout(() => loadFile(path), 100);
 }
 
+function openConfig() {
+  const modal = $('config-modal');
+  const nameInput = $('config-brand-name');
+  const taglineInput = $('config-tagline');
+  const productInput = $('config-product-name');
+  const accentInput = $('config-accent-color');
+  const iconInput = $('config-icon');
+  const currencyInput = $('config-currency');
+  const symbolInput = $('config-symbol');
+  const repoOwnerInput = $('config-repo-owner');
+  const repoNameInput = $('config-repo-name');
+  const repoBranchInput = $('config-repo-branch');
+  const emailInput = $('config-email');
+  const phoneInput = $('config-phone');
+  const websiteInput = $('config-website');
+
+  if (nameInput) nameInput.value = config.brand.name;
+  if (taglineInput) taglineInput.value = config.brand.tagline;
+  if (productInput) productInput.value = config.brand.productName;
+  if (accentInput) accentInput.value = config.brand.accentColor;
+  if (iconInput) iconInput.value = config.brand.icon;
+  if (currencyInput) currencyInput.value = config.pricing.currency;
+  if (symbolInput) symbolInput.value = config.pricing.symbol;
+  if (repoOwnerInput) repoOwnerInput.value = config.repo.owner;
+  if (repoNameInput) repoNameInput.value = config.repo.name;
+  if (repoBranchInput) repoBranchInput.value = config.repo.branch;
+  if (emailInput) emailInput.value = config.contact.email;
+  if (phoneInput) phoneInput.value = config.contact.phone;
+  if (websiteInput) websiteInput.value = config.contact.website;
+
+  renderConfigSections();
+  renderConfigPricing();
+
+  modal.classList.add('open');
+}
+
+function closeConfig() {
+  $('config-modal').classList.remove('open');
+}
+
+function renderConfigSections() {
+  const container = $('config-sections-list');
+  if (!container) return;
+  container.innerHTML = DEFAULT_SECTIONS.map(s => `
+    <label class="config-checkbox">
+      <input type="checkbox" value="${s.id}" ${config.sections.includes(s.id) ? 'checked' : ''}>
+      <span>${s.icon} ${s.name}</span>
+    </label>
+  `).join('');
+}
+
+function renderConfigPricing() {
+  const container = $('config-pricing-list');
+  if (!container) return;
+  container.innerHTML = config.pricing.tiers.map((tier, i) => `
+    <div class="config-pricing-tier">
+      <input type="text" class="config-tier-name" data-index="${i}" value="${tier.name}" placeholder="Tier name">
+      <input type="number" class="config-tier-monthly" data-index="${i}" value="${tier.monthly}" placeholder="Monthly">
+      <input type="number" class="config-tier-setup" data-index="${i}" value="${tier.setup}" placeholder="Setup">
+      <button class="config-remove-tier" data-index="${i}" ${config.pricing.tiers.length <= 1 ? 'disabled' : ''}>×</button>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.config-remove-tier').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.index);
+      if (config.pricing.tiers.length > 1) {
+        config.pricing.tiers.splice(idx, 1);
+        renderConfigPricing();
+      }
+    });
+  });
+}
+
+function saveConfigFromModal() {
+  const name = $('config-brand-name')?.value || config.brand.name;
+  const tagline = $('config-tagline')?.value || config.brand.tagline;
+  const productName = $('config-product-name')?.value || config.brand.productName;
+  const accentColor = $('config-accent-color')?.value || config.brand.accentColor;
+  const icon = $('config-icon')?.value || config.brand.icon;
+  const currency = $('config-currency')?.value || config.pricing.currency;
+  const symbol = $('config-symbol')?.value || config.pricing.symbol;
+  const repoOwner = $('config-repo-owner')?.value || config.repo.owner;
+  const repoName = $('config-repo-name')?.value || config.repo.name;
+  const repoBranch = $('config-repo-branch')?.value || config.repo.branch;
+  const email = $('config-email')?.value || config.contact.email;
+  const phone = $('config-phone')?.value || config.contact.phone;
+  const website = $('config-website')?.value || config.contact.website;
+
+  const sectionCheckboxes = document.querySelectorAll('#config-sections-list input[type="checkbox"]');
+  const sections = Array.from(sectionCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
+
+  const tierNames = document.querySelectorAll('.config-tier-name');
+  const tierMonthlies = document.querySelectorAll('.config-tier-monthly');
+  const tierSetups = document.querySelectorAll('.config-tier-setup');
+  const tiers = [];
+  tierNames.forEach((el, i) => {
+    tiers.push({
+      name: el.value || `Tier ${i+1}`,
+      monthly: parseInt(tierMonthlies[i]?.value) || 0,
+      setup: parseInt(tierSetups[i]?.value) || 0
+    });
+  });
+
+  saveConfig({
+    brand: { name, tagline, productName, accentColor, icon },
+    sections: sections.length ? sections : config.sections,
+    pricing: { currency, symbol, tiers },
+    repo: { owner: repoOwner, name: repoName, branch: repoBranch },
+    contact: { email, phone, website }
+  });
+
+  closeConfig();
+  showToast('Configuration saved');
+  renderSidebar();
+  loadFiles(getSections()[0]?.id || '01-BRAND');
+}
+
+function addConfigTier() {
+  config.pricing.tiers.push({ name: `Tier ${config.pricing.tiers.length + 1}`, monthly: 0, setup: 0 });
+  renderConfigPricing();
+}
+
+function exportConfig() {
+  const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${config.brand.name.toLowerCase().replace(/\s+/g, '-')}-config.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Config exported');
+}
+
+function importConfig() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const imported = JSON.parse(ev.target.result);
+        saveConfig(imported);
+        closeConfig();
+        showToast('Config imported');
+        renderSidebar();
+        loadFiles(getSections()[0]?.id || '01-BRAND');
+      } catch {
+        showToast('Invalid config file');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function resetConfig() {
+  if (confirm('Reset all settings to default?')) {
+    saveConfig(DEFAULT_CONFIG);
+    closeConfig();
+    showToast('Config reset');
+    renderSidebar();
+    loadFiles(getSections()[0]?.id || '01-BRAND');
+  }
+}
+
 function init() {
   renderSidebar();
   setTheme(getTheme());
+  applyConfig();
 
   contentEl = $('content');
   loadingStateEl = $('loading-state');
@@ -420,6 +656,7 @@ function init() {
   const bookmarkBtn = $('bookmark-btn');
   const searchInput = $('search-input');
   const fileFilterInput = document.querySelector('.file-list-search input');
+  const configBtn = $('config-btn');
 
   toggle.addEventListener('click', () => {
     sidebar.classList.toggle('open');
@@ -436,6 +673,16 @@ function init() {
   bookmarkBtn.addEventListener('click', () => {
     if (currentFile) toggleBookmark(currentFile);
   });
+
+  configBtn.addEventListener('click', openConfig);
+
+  document.getElementById('config-close').addEventListener('click', closeConfig);
+  document.getElementById('config-modal-backdrop').addEventListener('click', closeConfig);
+  document.getElementById('config-save').addEventListener('click', saveConfigFromModal);
+  document.getElementById('config-export').addEventListener('click', exportConfig);
+  document.getElementById('config-import').addEventListener('click', importConfig);
+  document.getElementById('config-reset').addEventListener('click', resetConfig);
+  document.getElementById('config-add-tier').addEventListener('click', addConfigTier);
 
   searchInput.addEventListener('focus', openSearch);
   searchInput.addEventListener('click', openSearch);
@@ -458,6 +705,7 @@ function init() {
     }
     if (e.key === 'Escape') {
       closeSearch();
+      closeConfig();
       sidebar.classList.remove('open');
       overlay.classList.remove('visible');
     }
@@ -466,7 +714,7 @@ function init() {
   window.addEventListener('online', () => showToast('Back online'));
   window.addEventListener('offline', () => showToast('You are offline'));
 
-  loadFiles(SECTIONS[0].id);
+  loadFiles(getSections()[0]?.id || '01-BRAND');
 }
 
 if (document.readyState === 'loading') {
