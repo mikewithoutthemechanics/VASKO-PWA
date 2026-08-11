@@ -1119,6 +1119,14 @@ function initCoach() {
     });
   });
 
+  document.querySelectorAll('.coach-moment-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const moment = btn.dataset.moment;
+      logKeyMoment('Manual', moment);
+      showToast(`Logged: ${moment}`);
+    });
+  });
+
   document.querySelectorAll('.coach-objection').forEach(btn => {
     btn.addEventListener('click', () => {
       const objectionId = btn.dataset.objection;
@@ -1146,90 +1154,125 @@ function initCoach() {
 
 /* Live Call Mode */
 const LIVE_KEYWORDS = {
-  'expensive|cost|price|budget|afford|too much': {
+  'expensive|cost|price|budget|afford|too much|steep|high|value for money': {
     title: '💰 Pricing Objection',
-    insight: 'They are anchoring on cost, not value.',
-    response: '"I hear you. What I want you to consider is the cost of not fixing this. If your reps waste 10 hours a week on bad outreach, that is 40 hours of selling time lost. At your deal size, that is roughly [X] in opportunity cost per month. The way to think about VASKO is: if it gets you one extra deal, it pays for itself 5x over."',
-    followUp: 'Ask: "What would an extra deal per month be worth to you?"'
+    insight: 'They are anchoring on cost, not value. They have not connected the investment to the outcome yet.',
+    response: '"I hear you. Here is what I want you to do: add up the cost of the problem you told me about earlier. You said your reps are spending 30% of their time on [specific task they mentioned]. That is 12 hours a week. At [their average deal size], that is roughly [X] in opportunity cost per month. VASKO costs less than one of those lost deals. So the real question is not can you afford VASKO—it is can you afford not to have it?"',
+    followUp: 'Then ask: "If we could guarantee you one extra deal per month, would that cover the investment?" Pause and let them answer.',
+    framework: 'A-R-R: Acknowledge → Reframe → Resolve. Never argue price. Always pivot to ROI.'
   },
-  'think about|think it over|need to think|let me think|not sure': {
+  'think about|think it over|need to think|let me think|not sure|could be|might be': {
     title: '⏳ Stall Tactic',
-    insight: 'They are not convinced or they are not the decision maker.',
-    response: '"Absolutely. This is a decision that affects your whole revenue operation. But thinking without a deadline usually leads to doing nothing. What specifically do you need to think about? Is it the investment, the implementation, or the outcome?"',
-    followUp: 'Set a specific follow-up: "Let us reconnect on [day] at [time] with an answer."'
+    insight: 'Either they are not convinced, or they are not the decision maker. "I need to think" almost always means "I do not see enough value yet."',
+    response: '"Absolutely. This is a decision that affects your whole revenue operation. But here is what I have learned: thinking without a deadline usually leads to doing nothing. What specifically do you need to think about? Is it the investment, the implementation, or whether it will actually work? Because if it is the last one, I can show you exactly what [similar client] achieved in 60 days."',
+    followUp: 'Set a specific follow-up: "Let us agree now: I will send you the full proposal by Thursday. You will make a decision by next Tuesday. If you have not decided by then, I will follow up once—and then we both move on. Is that fair?"',
+    framework: 'The "When" Question: Never let "I will think about it" hang. Get a specific decision date on the table.'
   },
-  'happy|current|satisfied|working fine|no problem|okay for now': {
+  'happy|current|satisfied|working fine|no problem|okay for now|doing well|good enough': {
     title: '😐 Status Quo Bias',
-    insight: 'They do not feel the pain enough to change.',
-    response: '"That is great to hear. Can I ask: what would it take for you to go from good to great? Most teams we work with were doing fine too—until they saw what consistent messaging and a real system could do. What does success look like for you this quarter?"',
-    followUp: 'Ask: "If you could change one thing about your current process, what would it be?"'
+    insight: 'They do not feel the pain enough to change. "Good enough" is the most dangerous phrase in sales.',
+    response: '"That is great to hear. And I want to be honest with you: if your current process is working for you, you probably do not need VASKO. But here is what I would ask: on a scale of 1 to 10, how consistent is your outreach? And when was the last time you reviewed your proposal template? Because the teams I work with who say they are fine usually discover they are leaving 20-30% of deals on the table. Not because the product is bad. Because the system is missing."',
+    followUp: 'Ask: "If you could change one thing about your sales process tomorrow, what would it be?" Then tie VASKO directly to that one thing.',
+    framework: 'Contrast Principle: Do not attack their current state. Contrast their current state with their desired state using their own words.'
   },
-  'no budget|not in budget|cant afford|cannot afford|tight budget': {
+  'no budget|not in budget|cant afford|cannot afford|tight budget|no money|cash flow': {
     title: '💸 Budget Constraint',
-    insight: 'Either they truly cannot afford it, or you have not demonstrated enough value.',
-    response: '"I understand budget is real. Let us look at it differently: what is the cost of staying where you are? If you are losing deals to inconsistent messaging, that is not a budget problem—that is a revenue problem. We can structure the engagement to match your cash flow."',
-    followUp: 'Offer: "Would a Core tier at [lower price] be a better fit to get started?"'
+    insight: 'Either they truly cannot afford it, or you have not demonstrated enough value. Rarely is it actually about the money.',
+    response: '"I understand budget is real. But let me ask you this: if you had to cut something from your sales operation today, what would you cut? The answer is usually the thing that is not delivering measurable results. VASKO delivers measurable results: [specific metric from their business]. The engagement pays for itself within 30 days. If that is not a fit right now, let us look at the Core tier. But I want to be straight with you: the cost of not fixing this is higher than the cost of fixing it."',
+    followUp: 'Offer a structured path: "Would it help if we started with just the Brand and Pricing modules for [lower price] this month, then added the rest next month?"',
+    framework: 'Budget is usually a value problem, not a money problem. If they see the ROI, they will find the budget.'
   },
-  'wrong time|bad timing|not now|busy|next quarter': {
+  'wrong time|bad timing|not now|busy|next quarter|q4|january|february': {
     title: '📅 Timing Objection',
-    insight: 'They are interested but not urgent.',
-    response: '"I respect that. Timing matters. But here is what I would ask: if we do not start now, what changes in [next quarter]? If the pain is real, waiting only costs you more in lost revenue. Let us agree on a specific date to revisit this."',
-    followUp: 'Set calendar invite now for their "ready" date.'
+    insight: 'They are interested but not urgent. You need to create urgency around the cost of waiting.',
+    response: '"I respect that. Timing matters. But here is what I want you to consider: every quarter you wait is another quarter your reps are sending inconsistent outreach and losing deals to the status quo. At your current close rate, that is roughly [X] in deferred revenue per quarter. So the question is not whether it is the right time. It is whether you can afford to wait. Let us agree on a specific date to revisit this—and put it in the calendar now."',
+    followUp: 'Set a calendar invite right now for their "ready" date. Send them a confirmation email with the date and a reminder of their own pain points.',
+    framework: 'Cost of Inaction: Make the waiting period painful. Quantify what they lose by not acting.'
   },
-  'competitor|other vendor|already using|alternatives|comparing': {
+  'competitor|other vendor|already using|alternatives|comparing|looking at|hubspot|outreach|salesforce': {
     title: '🆚 Competitor Mention',
-    insight: 'They are shopping. This is a buying signal.',
-    response: '"That is smart. Who else are you looking at? What I can tell you is that most competitors sell you software or advice. We sell you the actual playbook—tested across 500+ sales conversations. The difference is speed: you get a working system in 14 days, not 14 weeks."',
-    followUp: 'Ask: "What matters most to you in a partner—speed, depth, or cost?"'
+    insight: 'They are shopping. This is actually a buying signal. Do not bash the competitor—differentiate on value.',
+    response: '"That is smart. Who else are you looking at? What I can tell you is that most of those tools give you software. We give you the playbook that makes the software useful. [Competitor] is great at [what they do]. But they do not give you the discovery scripts, the objection handling, the proposal templates, the outreach sequences. That is where we come in. And the difference is speed: you get a working system in 14 days, not 14 weeks. The question is: do you want a tool, or do you want a system that actually works?"',
+    followUp: 'Ask: "What matters most to you in a partner—speed, depth, or cost?" Then tailor your response to their answer.',
+    framework: 'Differentiation Matrix: Acknowledge the competitor, then pivot to what they cannot give you—the tested playbook, the implementation speed, the human layer.'
   },
-  'not sure|dont know|who decides|decision maker|need to ask': {
+  'not sure|dont know|who decides|decision maker|need to ask|not my call|my boss': {
     title: '🤔 Decision Process',
-    insight: 'You are talking to an influencer, not the decision maker.',
-    response: '"That is helpful to know. Who else would need to be involved in this decision? And what would they need to see to feel confident moving forward?"',
-    followUp: 'Map the decision process: "Walk me through how a decision like this typically gets made."'
+    insight: 'You are likely talking to an influencer, not the economic buyer. Map the process before you pitch.',
+    response: '"That is really helpful to know. Here is what I would suggest: let us not pitch you on something you cannot buy. Instead, let me ask: who else would need to be involved in this decision? And more importantly, what would they need to see to feel confident moving forward? Because if I can show you exactly what to tell them, we both win."',
+    followUp: 'Map the process: "Walk me through how a decision like this typically gets made. Who initiates it? Who reviews it? Who signs off? And what is the timeline?" Then tailor your proposal to each stakeholder.',
+    framework: 'MEDDIC: Map Decision Process and Economic Buyer early. Never present to an influencer as if they can sign.'
   },
-  'contract|terms|agreement|legal|paperwork|sign': {
+  'contract|terms|agreement|legal|paperwork|sign|proposal|ready to move': {
     title: '📝 Commercial Discussion',
-    insight: 'They are ready to buy. Do not keep selling.',
-    response: '"Great. Let us move to a proposal. I will send over the [Core/Prime/Pro] tier breakdown by [day]. The proposal is valid for 14 days. What questions do you have before we finalise?"',
-    followUp: 'Send proposal immediately. Schedule follow-up for 48 hours later.'
+    insight: 'They are ready to buy. Do not keep selling. Move to close.',
+    response: '"Perfect. Let us get to a proposal. Based on everything we have discussed, here is what I recommend: [Core/Prime/Pro] tier at [price]. Setup is [X], monthly is [Y]. I will have the full proposal to you by [day]. The proposal is valid for 14 days. Before I send it, is there anything else you need to feel confident moving forward?"',
+    followUp: 'Send proposal within 24 hours. Schedule follow-up for 48 hours later. If they do not respond, call them.',
+    framework: 'Assume the sale. Summarise value, state the investment, ask for the commitment. Do not apologise for the price.'
   },
-  'demo|show me|how does it work|walk me|example': {
+  'demo|show me|how does it work|walk me|example|see it|look at': {
     title: '🎬 Demo Request',
-    insight: 'They want to see value in action.',
-    response: '"Absolutely. Based on what you have shared, I think the [Core/Prime/Pro] tier would be the right fit. Let me show you exactly how it would solve [specific pain they mentioned]. This will take about 5 minutes."',
-    followUp: 'Focus on 2-3 specific features that map to their pain. Do not show everything.'
+    insight: 'They want to see value in action. Focus on their pain, not your features.',
+    response: '"Absolutely. Based on what you shared earlier about [specific pain point they mentioned], let me show you exactly how VASKO solves that. This will take about 5 minutes. I am not going to show you everything—I am only going to show you the parts that matter to you."',
+    followUp: 'Start with the pain they described. Show 2-3 specific features. Connect each feature back to their pain. End with the ROI: "This gets you from [current state] to [desired state] in 14 days."',
+    framework: 'Pain-Led Demo: Never show a feature without first restating the pain. Feature without pain is just noise.'
   },
-  'team|reps|hiring|ramp|training|onboard': {
+  'team|reps|hiring|ramp|training|onboard|adoption|culture|resistance': {
     title: '👥 Team Enablement',
-    insight: 'They care about adoption and scalability.',
-    response: '"That is exactly what VASKO is built for. We give your team a complete playbook so new reps reach quota in 6 weeks, not 6 months. The onboarding is included—we train your team and hand over the system."',
-    followUp: 'Share the staff adoption framework and time-to-productivity metrics.'
+    insight: 'They care about adoption, not just content. They have been burned by systems their team did not use.',
+    response: '"That is exactly where VASKO is different. We do not just hand you a deck and walk away. We build the system, train your team, and stay until it sticks. New reps reach quota in 6 weeks, not 6 months. We have a staff adoption framework that gets 80% adoption in the first 2 weeks. And if your team resists, we give you the scripts to win them over."',
+    followUp: 'Share the staff adoption framework and a case study where a resistant team became power users.',
+    framework: 'Adoption First: Always address the "will my team actually use this?" fear before you talk about features.'
   }
 };
 
 const COACH_RESPONSES = {
   'opening': {
     title: 'Opening',
-    script: '"Hi [Name], thanks for making time. The goal today is to understand where you are losing revenue in your sales process, and whether VASKO is the right fix. If it is not, I will tell you. Does that sound fair?"'
+    script: '"Hi [Name], thanks for making time. Quick ground rule: if this is not a fit, I will tell you and we will both save 30 minutes. The goal today is simple—understand where you are losing revenue in your sales process, and whether we can fix it. Does that sound fair?"'
   },
   'qualification': {
     title: 'Qualification',
-    script: '"What does success look like for you this quarter? And tell me about the last deal you lost—what happened?"'
+    script: '"Let me ask you two questions: First, what does success look like for you this quarter—specifically? And second, tell me about the last deal you lost. Not the one you won—the one you should have won but did not. What happened?"'
   },
   'pain': {
     title: 'Pain Deep-Dive',
-    script: '"You mentioned [pain point]. Tell me more about that. How long has that been a problem? What have you tried to fix it? And if you fixed it, what would change for you personally?"'
+    script: '"You mentioned [pain point]. I want to understand the cost of that. How long has that been happening? What have you tried to fix it? And this is the important one: if you fixed it tomorrow, what would change for you personally? Because if it is just a nice-to-have, we should stop here. But if it is a must-have, let us keep going."'
   },
   'investment': {
     title: 'Investment Framing',
-    script: '"For a team your size, the system typically sits at [Core/Prime/Pro]. The setup is [X], and the monthly engagement is [Y]. The way to think about it is: if this gets you one extra deal per month, it pays for itself 5x over."'
+    script: '"Here is how I want you to think about this: you told me your average deal is [X] and you close about [Y] deals per quarter. If VASKO gets you just one extra deal per quarter, it pays for itself 3x over. If it gets you two, it is 6x. The question is not whether you can afford it. The question is whether you can afford to leave those deals on the table."'
   },
   'close': {
     title: 'Closing',
-    script: '"Here is where I think we are. [Summarise pain + solution + investment]. Does that make sense? Which next step works best for you: proposal by Thursday, or a follow-up with your CFO?"'
+    script: '"Let me summarise what we have agreed on. You said [pain point]. You said [desired outcome]. VASKO solves that with [specific module]. The investment is [price]. The timeline is 14 days. So here is what I propose: I will send the proposal by [day]. You review it with [decision maker]. We reconnect on [day] with a yes or no. Does that work?"'
   }
 };
+
+const SCENARIO_SCRIPT = {
+  'discovery': {
+    title: 'Discovery Call Flow',
+    steps: [
+      { time: '0-2 min', title: 'Opening', script: '"Hi [Name], thanks for making time. Quick ground rule: if this is not a fit, I will tell you and we will both save 30 minutes. The goal today is simple—understand where you are losing revenue in your sales process, and whether we can fix it. Does that sound fair?"' },
+      { time: '2-10 min', title: 'Context Setting', script: '"Before I ask anything, tell me about your current sales process. Walk me through what happens from the moment a lead enters your pipeline to the moment they either sign or ghost you."' },
+      { time: '10-20 min', title: 'Pain Identification', script: '"You said [pain point]. Why do you think that is happening? And what have you tried to fix it? And if you fixed it tomorrow, what would change for you personally?"' },
+      { time: '20-26 min', title: 'Value Mapping', script: '"If we fixed [top pain], what would that unlock for you? More deals? Better deals? Faster deals? How would that change your forecast?"' },
+      { time: '26-30 min', title: 'Investment Conversation', script: '"For a team your size, the system typically sits at [Core/Prime/Pro]. The setup is [X], and the monthly engagement is [Y]. The way to think about it is: if this gets you one extra deal per month, it pays for itself 5x over."' },
+      { time: '30-32 min', title: 'Close', script: '"Here is where I think we are. [Summarise pain + solution + investment]. Does that make sense? Which next step works best for you: proposal by Thursday, or a follow-up with your CFO?"' }
+    ]
+  },
+  'cold-email': {
+    title: 'Cold Outreach Flow',
+    steps: [
+      { time: 'Email 1', title: 'Pattern Interrupt', script: '"Hi [Name], I am not going to sell you anything. I am going to tell you something uncomfortable. I looked at [Company] and your product is solid. But your sales process is leaking. Most B2B companies lose 30-40% of their pipeline to inconsistent messaging, bad proposals, and slow follow-up. Not because the product is bad. Because the system is missing."' },
+      { time: 'Email 2', title: 'Social Proof', script: '"I built VASKO for companies like yours. [Similar Company] deployed it last quarter. Within 60 days: close rate 18% to 29%, deal size up 27%, onboarding time down 60%. That is what happens when your team has a playbook instead of a guess."' },
+      { time: 'Email 3', title: 'Direct Ask', script: '"I have one Prime slot open for Q3. If we are going to work together, I need a signed agreement by Friday so I can reserve the slot. No pressure—but I want to be upfront about that."' }
+    ]
+  }
+};
+
+let conversationMemory = [];
+let dealContext = {};
 
 let liveState = {
   listening: false,
@@ -1280,6 +1323,8 @@ function initLiveCall() {
       setTimeout(() => switchCoachTab('live'), 100);
     });
   }
+
+  initDealContext();
 }
 
 function startListening() {
@@ -1446,23 +1491,116 @@ function detectKeywords(text) {
   const suggestionsMiniEl = $('live-suggestions-mini');
 
   if (matched.length > 0) {
+    const company = getDealContext('company');
+    const industry = getDealContext('industry');
+    const dealSize = getDealContext('dealSize');
+    const pain = getDealContext('pain');
+    const competitor = getDealContext('competitor');
+
+    const personalize = (text) => {
+      return text
+        .replace(/\[specific task they mentioned\]/g, pain || 'the tasks we discussed')
+        .replace(/\[their average deal size\]/g, dealSize || 'your average deal')
+        .replace(/\[X\]/g, dealSize || 'R50,000')
+        .replace(/\[similar client\]/g, company || 'a similar client')
+        .replace(/\[specific pain point they mentioned\]/g, pain || 'the challenges you described')
+        .replace(/\[Core\/Prime\/Pro\]/g, '[Core/Prime/Pro]')
+        .replace(/\[day\]/g, 'Thursday')
+        .replace(/\[price\]/g, 'R22,500/month')
+        .replace(/\[decision maker\]/g, getDealContext('decisionMaker') || 'your CFO')
+        .replace(/\[Competitor\]/g, competitor || 'your current tool')
+        .replace(/\[what they do\]/g, 'automation and outreach');
+    };
+
     const html = matched.map(s => `
-      <div class="live-suggestion" onclick="copySuggestion('${escapeHtml(s.response)}')">
+      <div class="live-suggestion" onclick="copySuggestion('${escapeHtml(personalize(s.response))}')">
         <div class="live-suggestion-title">${escapeHtml(s.title)}</div>
         <div class="live-suggestion-content">${escapeHtml(s.insight)}</div>
-        <div class="live-suggestion-response">${escapeHtml(s.response.substring(0, 180))}${s.response.length > 180 ? '...' : ''}</div>
-        <div class="live-suggestion-followup">${escapeHtml(s.followUp)}</div>
+        <div class="live-suggestion-response">${escapeHtml(personalize(s.response.substring(0, 180)))}${s.response.length > 180 ? '...' : ''}</div>
+        <div class="live-suggestion-followup">${escapeHtml(personalize(s.followUp))}</div>
       </div>
     `).join('');
 
     const miniHtml = matched.map(s => `
-      <div class="live-suggestion-mini" onclick="copySuggestion('${escapeHtml(s.response)}')">
-        ${escapeHtml(s.title)}: ${escapeHtml(s.insight)}
+      <div class="live-suggestion-mini" onclick="copySuggestion('${escapeHtml(personalize(s.response))}')">
+        ${escapeHtml(s.title)}: ${escapeHtml(personalize(s.insight))}
       </div>
     `).join('');
 
     if (suggestionsEl) suggestionsEl.innerHTML = html;
     if (suggestionsMiniEl) suggestionsMiniEl.innerHTML = miniHtml;
+
+    matched.forEach(s => {
+      logKeyMoment(s.title, s.insight);
+    });
+  }
+}
+
+function getDealContext(field) {
+  const el = document.getElementById(`deal-${field}`);
+  return el ? el.value.trim() : '';
+}
+
+function saveDealContext() {
+  const context = {
+    company: getDealContext('company'),
+    industry: getDealContext('industry'),
+    dealSize: getDealContext('dealSize'),
+    pain: getDealContext('pain'),
+    decisionMaker: getDealContext('decisionMaker'),
+    competitor: getDealContext('competitor')
+  };
+  localStorage.setItem('vasko-deal-context', JSON.stringify(context));
+}
+
+function loadDealContext() {
+  try {
+    const saved = localStorage.getItem('vasko-deal-context');
+    if (saved) {
+      const context = JSON.parse(saved);
+      Object.entries(context).forEach(([key, value]) => {
+        const el = document.getElementById(`deal-${key}`);
+        if (el && value) el.value = value;
+      });
+    }
+  } catch {}
+}
+
+function logKeyMoment(category, text) {
+  const list = document.getElementById('live-moments-list');
+  const count = document.getElementById('live-moments-count');
+  if (!list) return;
+
+  const placeholder = list.querySelector('.live-placeholder');
+  if (placeholder) placeholder.remove();
+
+  const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const moment = document.createElement('div');
+  moment.className = 'live-moment';
+  moment.innerHTML = `<span class="live-moment-time">${time}</span><span class="live-moment-text"><strong>${escapeHtml(category)}:</strong> ${escapeHtml(text.substring(0, 120))}${text.length > 120 ? '...' : ''}</span>`;
+  list.appendChild(moment);
+  list.scrollTop = list.scrollHeight;
+
+  if (count) count.textContent = list.querySelectorAll('.live-moment').length;
+}
+
+function initDealContext() {
+  loadDealContext();
+  const fields = ['company', 'industry', 'dealSize', 'pain', 'decisionMaker', 'competitor'];
+  fields.forEach(field => {
+    const el = document.getElementById(`deal-${field}`);
+    if (el) {
+      el.addEventListener('input', saveDealContext);
+    }
+  });
+
+  const toggle = document.getElementById('deal-context-toggle');
+  const body = document.getElementById('deal-context-body');
+  if (toggle && body) {
+    toggle.addEventListener('click', () => {
+      body.parentElement.classList.toggle('collapsed');
+      toggle.textContent = body.parentElement.classList.contains('collapsed') ? '+' : '−';
+    });
   }
 }
 
@@ -1488,7 +1626,23 @@ function suggestNextMove() {
 
   if (suggestions.length > 0) {
     const latest = suggestions[suggestions.length - 1];
-    addLiveMessage(`💡 Suggested: ${latest.script}`, 'system');
+    const company = getDealContext('company');
+    const pain = getDealContext('pain');
+    const dealSize = getDealContext('dealSize');
+    const decisionMaker = getDealContext('decisionMaker');
+    const personalized = latest.script
+      .replace(/\[Name\]/g, 'them')
+      .replace(/\[specific task they mentioned\]/g, pain || 'the bottlenecks you described')
+      .replace(/\[their average deal size\]/g, dealSize || 'your average deal')
+      .replace(/\[X\]/g, dealSize || 'R50,000')
+      .replace(/\[Y\]/g, '4')
+      .replace(/\[pain point\]/g, pain || 'the challenges you mentioned')
+      .replace(/\[desired outcome\]/g, 'a consistent, predictable sales process')
+      .replace(/\[specific module\]/g, 'the complete VASKO system')
+      .replace(/\[price\]/g, 'R22,500/month')
+      .replace(/\[day\]/g, 'Thursday')
+      .replace(/\[decision maker\]/g, decisionMaker || 'your CFO');
+    addLiveMessage(`💡 Suggested: ${personalized}`, 'system');
   }
 }
 

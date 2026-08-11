@@ -1461,6 +1461,31 @@ html, body {
   border-color: var(--accent);
 }
 
+.coach-moments {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.coach-moment-btn {
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.coach-moment-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+  border-color: var(--accent);
+}
+
 .coach-timer {
   display: flex;
   flex-direction: column;
@@ -1532,6 +1557,156 @@ html, body {
   font-size: 0.85rem;
   color: var(--text-secondary);
   font-weight: 500;
+}
+
+.deal-context {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.deal-context-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.deal-context-toggle {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.deal-context-toggle:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.deal-context-body {
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.deal-context.collapsed .deal-context-body {
+  display: none;
+}
+
+.deal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.deal-field label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.deal-field input {
+  padding: 6px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-family: var(--font-sans);
+  outline: none;
+}
+
+.deal-field input:focus {
+  border-color: var(--accent);
+}
+
+.deal-field input::placeholder {
+  color: var(--text-muted);
+}
+
+.live-moments {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.live-moments-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.live-moments-count {
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.live-moments-list {
+  padding: 8px 12px;
+  max-height: 150px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.live-moment {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  border-left: 2px solid var(--accent);
+}
+
+.live-moment-time {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.live-moment-text {
+  color: var(--text-secondary);
+}
+
+.live-moment-text strong {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .live-transcript {

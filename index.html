@@ -204,6 +204,17 @@
             </div>
           </div>
           <div class="coach-tool-section">
+            <h4>Log Moment</h4>
+            <div class="coach-moments">
+              <button class="coach-moment-btn" data-moment="Pain Confirmed">✓ Pain Confirmed</button>
+              <button class="coach-moment-btn" data-moment="Budget Discussed">💰 Budget Discussed</button>
+              <button class="coach-moment-btn" data-moment="Decision Maker Identified">👤 Decision Maker ID'd</button>
+              <button class="coach-moment-btn" data-moment="Competitor Mentioned">🆚 Competitor</button>
+              <button class="coach-moment-btn" data-moment="Timeline Set">📅 Timeline Set</button>
+              <button class="coach-moment-btn" data-moment="Next Step Agreed">➡️ Next Step</button>
+            </div>
+          </div>
+          <div class="coach-tool-section">
             <h4>Objection Quick-Access</h4>
             <div class="coach-objections" id="coach-objections">
               <button class="coach-objection" data-objection="too-expensive">Too expensive</button>
@@ -229,6 +240,47 @@
       </div>
       <div class="coach-tab-content" id="tab-live">
         <div class="live-call" id="live-call">
+          <div class="deal-context" id="deal-context">
+            <div class="deal-context-header">
+              <span>🎯 Deal Context</span>
+              <button class="deal-context-toggle" id="deal-context-toggle">−</button>
+            </div>
+            <div class="deal-context-body" id="deal-context-body">
+              <div class="deal-field">
+                <label>Company / Prospect</label>
+                <input type="text" id="deal-company" placeholder="Acme Corp">
+              </div>
+              <div class="deal-field">
+                <label>Industry</label>
+                <input type="text" id="deal-industry" placeholder="SaaS / Manufacturing / Finance">
+              </div>
+              <div class="deal-field">
+                <label>Avg Deal Size</label>
+                <input type="text" id="deal-size" placeholder="R75,000">
+              </div>
+              <div class="deal-field">
+                <label>Their Main Pain</label>
+                <input type="text" id="deal-pain" placeholder="Slow onboarding, inconsistent proposals">
+              </div>
+              <div class="deal-field">
+                <label>Decision Maker</label>
+                <input type="text" id="deal-decision-maker" placeholder="CFO / Head of Sales">
+              </div>
+              <div class="deal-field">
+                <label>Competitor They Mentioned</label>
+                <input type="text" id="deal-competitor" placeholder="HubSpot / Outreach / None">
+              </div>
+            </div>
+          </div>
+          <div class="live-moments" id="live-moments">
+            <div class="live-moments-header">
+              <span>📌 Key Moments</span>
+              <span class="live-moments-count" id="live-moments-count">0</span>
+            </div>
+            <div class="live-moments-list" id="live-moments-list">
+              <p class="live-placeholder">Key moments will appear here as the conversation unfolds.</p>
+            </div>
+          </div>
           <div class="live-status" id="live-status">
             <span class="live-dot"></span>
             <span class="live-text">Ready to listen</span>
