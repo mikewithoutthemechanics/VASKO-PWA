@@ -10,15 +10,31 @@
   <title>VASKO</title>
   <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="app">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <div class="brand">VASKO</div>
+        <div class="brand">
+          <span class="brand-icon">◆</span>
+          <span class="brand-text">VASKO</span>
+        </div>
         <div class="tagline">Sales & Marketing System</div>
+        <div class="search-box">
+          <span class="search-icon">⌕</span>
+          <input type="text" id="search-input" placeholder="Search content..." autocomplete="off">
+          <kbd class="search-kbd">⌘K</kbd>
+        </div>
       </div>
       <nav class="section-list" id="section-list"></nav>
+      <div class="sidebar-footer">
+        <button class="theme-toggle" id="theme-toggle" title="Toggle theme">
+          <span class="theme-icon">☀️</span>
+        </button>
+      </div>
     </aside>
 
     <div class="overlay" id="overlay"></div>
@@ -26,22 +42,52 @@
     <main class="main">
       <div class="topbar">
         <button class="menu-btn" id="sidebar-toggle" aria-label="Toggle menu">☰</button>
-        <div class="topbar-title" id="topbar-title">Brand</div>
+        <div class="topbar-breadcrumb" id="topbar-breadcrumb">
+          <span class="breadcrumb-item">Brand</span>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-btn" id="bookmark-btn" title="Bookmark current page">☆</button>
+        </div>
       </div>
       <div class="content-area">
         <aside class="file-sidebar">
-          <div class="file-list-header" id="file-list-header">Files</div>
+          <div class="file-list-header" id="file-list-header">
+            <span>Files</span>
+            <span class="file-count" id="file-count">0</span>
+          </div>
+          <div class="file-list-search" id="file-list-search">
+            <input type="text" placeholder="Filter files...">
+          </div>
           <div id="file-list"></div>
         </aside>
         <article class="content" id="content">
-          <div class="error">
-            <h2>Loading...</h2>
-            <p>Select a section to get started.</p>
+          <div class="loading-state" id="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Loading...</p>
+          </div>
+          <div class="error-state" id="error-state" style="display: none;">
+            <h2>Something went wrong</h2>
+            <p id="error-message"></p>
+            <button class="retry-btn" onclick="loadFiles(currentPath)">Retry</button>
           </div>
         </article>
       </div>
     </main>
   </div>
+
+  <div class="search-modal" id="search-modal">
+    <div class="search-modal-backdrop" id="search-modal-backdrop"></div>
+    <div class="search-modal-content">
+      <div class="search-modal-input-wrap">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="modal-search-input" placeholder="Search all content..." autocomplete="off">
+        <kbd class="search-kbd">ESC</kbd>
+      </div>
+      <div class="search-results" id="search-results"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
 
   <script src="/app.js"></script>
   <script>
