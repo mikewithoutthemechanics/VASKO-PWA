@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="VASKO Sales and Marketing System">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>VASKO</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">VASKO</div>
+        <div class="tagline">Sales & Marketing System</div>
+      </div>
+      <nav class="section-list" id="section-list"></nav>
+    </aside>
+
+    <div class="overlay" id="overlay"></div>
+
+    <main class="main">
+      <div class="topbar">
+        <button class="menu-btn" id="sidebar-toggle" aria-label="Toggle menu">☰</button>
+        <div class="topbar-title" id="topbar-title">Brand</div>
+      </div>
+      <div class="content-area">
+        <aside class="file-sidebar">
+          <div class="file-list-header" id="file-list-header">Files</div>
+          <div id="file-list"></div>
+        </aside>
+        <article class="content" id="content">
+          <div class="error">
+            <h2>Loading...</h2>
+            <p>Select a section to get started.</p>
+          </div>
+        </article>
+      </div>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js').catch(console.error);
+      });
+    }
+  </script>
+</body>
+</html>
