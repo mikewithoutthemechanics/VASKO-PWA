@@ -1623,9 +1623,27 @@ html, body {
 }
 
 .live-suggestion-content {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--text-secondary);
   line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+.live-suggestion-response {
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.5;
+  padding: 8px 10px;
+  background: var(--accent-subtle);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+}
+
+.live-suggestion-followup {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .live-controls {

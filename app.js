@@ -1146,16 +1146,89 @@ function initCoach() {
 
 /* Live Call Mode */
 const LIVE_KEYWORDS = {
-  'expensive|cost|price|budget|afford': { title: 'Pricing Objection', content: 'Acknowledge → Reframe → Resolve. Move from cost to ROI.' },
-  'think about|think it over|need to think|let me think': { title: 'Stall Tactic', content: 'Set a decision deadline. "What specifically do you need to think about?"' },
-  'happy|current|satisfied|working fine|no problem': { title: 'Status Quo Bias', content: 'Validate, then contrast. Show the cost of staying the same.' },
-  'no budget|not in budget|cant afford|cannot afford': { title: 'Budget Constraint', content: 'Explore payment options. Show ROI vs cost of inaction.' },
-  'wrong time|bad timing|not now|busy': { title: 'Timing Objection', content: 'Respect the timeline. Set a specific follow-up date.' },
-  'competitor|other vendor|already using|alternatives': { title: 'Competitor Mention', content: 'Acknowledge, differentiate on speed and playbook depth.' },
-  'not sure|dont know|who decides|decision maker': { title: 'Decision Process', content: 'Map the decision process. Identify the economic buyer.' },
-  'contract|terms|agreement|legal': { title: 'Commercial Discussion', content: 'Move to proposal. Summarise value and next steps.' },
-  'demo|show me|how does it work|walk me': { title: 'Demo Request', content: 'Schedule demo. Focus on their specific pain points.' },
-  'team|reps|hiring|ramp|training': { title: 'Team Enablement', content: 'Highlight onboarding playbook and time-to-productivity.' }
+  'expensive|cost|price|budget|afford|too much': {
+    title: '💰 Pricing Objection',
+    insight: 'They are anchoring on cost, not value.',
+    response: '"I hear you. What I want you to consider is the cost of not fixing this. If your reps waste 10 hours a week on bad outreach, that is 40 hours of selling time lost. At your deal size, that is roughly [X] in opportunity cost per month. The way to think about VASKO is: if it gets you one extra deal, it pays for itself 5x over."',
+    followUp: 'Ask: "What would an extra deal per month be worth to you?"'
+  },
+  'think about|think it over|need to think|let me think|not sure': {
+    title: '⏳ Stall Tactic',
+    insight: 'They are not convinced or they are not the decision maker.',
+    response: '"Absolutely. This is a decision that affects your whole revenue operation. But thinking without a deadline usually leads to doing nothing. What specifically do you need to think about? Is it the investment, the implementation, or the outcome?"',
+    followUp: 'Set a specific follow-up: "Let us reconnect on [day] at [time] with an answer."'
+  },
+  'happy|current|satisfied|working fine|no problem|okay for now': {
+    title: '😐 Status Quo Bias',
+    insight: 'They do not feel the pain enough to change.',
+    response: '"That is great to hear. Can I ask: what would it take for you to go from good to great? Most teams we work with were doing fine too—until they saw what consistent messaging and a real system could do. What does success look like for you this quarter?"',
+    followUp: 'Ask: "If you could change one thing about your current process, what would it be?"'
+  },
+  'no budget|not in budget|cant afford|cannot afford|tight budget': {
+    title: '💸 Budget Constraint',
+    insight: 'Either they truly cannot afford it, or you have not demonstrated enough value.',
+    response: '"I understand budget is real. Let us look at it differently: what is the cost of staying where you are? If you are losing deals to inconsistent messaging, that is not a budget problem—that is a revenue problem. We can structure the engagement to match your cash flow."',
+    followUp: 'Offer: "Would a Core tier at [lower price] be a better fit to get started?"'
+  },
+  'wrong time|bad timing|not now|busy|next quarter': {
+    title: '📅 Timing Objection',
+    insight: 'They are interested but not urgent.',
+    response: '"I respect that. Timing matters. But here is what I would ask: if we do not start now, what changes in [next quarter]? If the pain is real, waiting only costs you more in lost revenue. Let us agree on a specific date to revisit this."',
+    followUp: 'Set calendar invite now for their "ready" date.'
+  },
+  'competitor|other vendor|already using|alternatives|comparing': {
+    title: '🆚 Competitor Mention',
+    insight: 'They are shopping. This is a buying signal.',
+    response: '"That is smart. Who else are you looking at? What I can tell you is that most competitors sell you software or advice. We sell you the actual playbook—tested across 500+ sales conversations. The difference is speed: you get a working system in 14 days, not 14 weeks."',
+    followUp: 'Ask: "What matters most to you in a partner—speed, depth, or cost?"'
+  },
+  'not sure|dont know|who decides|decision maker|need to ask': {
+    title: '🤔 Decision Process',
+    insight: 'You are talking to an influencer, not the decision maker.',
+    response: '"That is helpful to know. Who else would need to be involved in this decision? And what would they need to see to feel confident moving forward?"',
+    followUp: 'Map the decision process: "Walk me through how a decision like this typically gets made."'
+  },
+  'contract|terms|agreement|legal|paperwork|sign': {
+    title: '📝 Commercial Discussion',
+    insight: 'They are ready to buy. Do not keep selling.',
+    response: '"Great. Let us move to a proposal. I will send over the [Core/Prime/Pro] tier breakdown by [day]. The proposal is valid for 14 days. What questions do you have before we finalise?"',
+    followUp: 'Send proposal immediately. Schedule follow-up for 48 hours later.'
+  },
+  'demo|show me|how does it work|walk me|example': {
+    title: '🎬 Demo Request',
+    insight: 'They want to see value in action.',
+    response: '"Absolutely. Based on what you have shared, I think the [Core/Prime/Pro] tier would be the right fit. Let me show you exactly how it would solve [specific pain they mentioned]. This will take about 5 minutes."',
+    followUp: 'Focus on 2-3 specific features that map to their pain. Do not show everything.'
+  },
+  'team|reps|hiring|ramp|training|onboard': {
+    title: '👥 Team Enablement',
+    insight: 'They care about adoption and scalability.',
+    response: '"That is exactly what VASKO is built for. We give your team a complete playbook so new reps reach quota in 6 weeks, not 6 months. The onboarding is included—we train your team and hand over the system."',
+    followUp: 'Share the staff adoption framework and time-to-productivity metrics.'
+  }
+};
+
+const COACH_RESPONSES = {
+  'opening': {
+    title: 'Opening',
+    script: '"Hi [Name], thanks for making time. The goal today is to understand where you are losing revenue in your sales process, and whether VASKO is the right fix. If it is not, I will tell you. Does that sound fair?"'
+  },
+  'qualification': {
+    title: 'Qualification',
+    script: '"What does success look like for you this quarter? And tell me about the last deal you lost—what happened?"'
+  },
+  'pain': {
+    title: 'Pain Deep-Dive',
+    script: '"You mentioned [pain point]. Tell me more about that. How long has that been a problem? What have you tried to fix it? And if you fixed it, what would change for you personally?"'
+  },
+  'investment': {
+    title: 'Investment Framing',
+    script: '"For a team your size, the system typically sits at [Core/Prime/Pro]. The setup is [X], and the monthly engagement is [Y]. The way to think about it is: if this gets you one extra deal per month, it pays for itself 5x over."'
+  },
+  'close': {
+    title: 'Closing',
+    script: '"Here is where I think we are. [Summarise pain + solution + investment]. Does that make sense? Which next step works best for you: proposal by Thursday, or a follow-up with your CFO?"'
+  }
 };
 
 let liveState = {
@@ -1180,6 +1253,14 @@ function initLiveCall() {
   if (liveStop) liveStop.addEventListener('click', stopListening);
   if (liveCopy) liveCopy.addEventListener('click', copyLastTranscriptLine);
   if (livePip) livePip.addEventListener('click', requestPiP);
+
+  const liveSuggest = $('live-suggest');
+  if (liveSuggest) {
+    liveSuggest.addEventListener('click', () => {
+      suggestNextMove();
+      showToast('Analyzing conversation...');
+    });
+  }
 
   if (liveMiniStart) liveMiniStart.addEventListener('click', startListening);
   if (liveMiniStop) liveMiniStop.addEventListener('click', stopListening);
@@ -1236,6 +1317,7 @@ function startListening() {
       addLiveMessage(finalTranscript.trim(), 'user');
       liveState.lastUserText = finalTranscript.trim();
       detectKeywords(finalTranscript.trim());
+      suggestNextMove();
     }
 
     if (interimTranscript) {
@@ -1351,34 +1433,62 @@ function updateLiveInterim(text) {
 
 function detectKeywords(text) {
   const lower = text.toLowerCase();
-  const suggestions = [];
+  const matched = [];
 
   for (const [pattern, suggestion] of Object.entries(LIVE_KEYWORDS)) {
     const regex = new RegExp(pattern, 'i');
     if (regex.test(lower)) {
-      suggestions.push(suggestion);
+      matched.push(suggestion);
     }
   }
 
   const suggestionsEl = $('live-suggestions');
   const suggestionsMiniEl = $('live-suggestions-mini');
 
-  if (suggestions.length > 0) {
-    const html = suggestions.map(s => `
-      <div class="live-suggestion" onclick="copySuggestion('${escapeHtml(s.title)}: ${escapeHtml(s.content)}')">
+  if (matched.length > 0) {
+    const html = matched.map(s => `
+      <div class="live-suggestion" onclick="copySuggestion('${escapeHtml(s.response)}')">
         <div class="live-suggestion-title">${escapeHtml(s.title)}</div>
-        <div class="live-suggestion-content">${escapeHtml(s.content)}</div>
+        <div class="live-suggestion-content">${escapeHtml(s.insight)}</div>
+        <div class="live-suggestion-response">${escapeHtml(s.response.substring(0, 180))}${s.response.length > 180 ? '...' : ''}</div>
+        <div class="live-suggestion-followup">${escapeHtml(s.followUp)}</div>
       </div>
     `).join('');
 
-    const miniHtml = suggestions.map(s => `
-      <div class="live-suggestion-mini" onclick="copySuggestion('${escapeHtml(s.title)}: ${escapeHtml(s.content)}')">
-        ${escapeHtml(s.title)}: ${escapeHtml(s.content.substring(0, 80))}${s.content.length > 80 ? '...' : ''}
+    const miniHtml = matched.map(s => `
+      <div class="live-suggestion-mini" onclick="copySuggestion('${escapeHtml(s.response)}')">
+        ${escapeHtml(s.title)}: ${escapeHtml(s.insight)}
       </div>
     `).join('');
 
     if (suggestionsEl) suggestionsEl.innerHTML = html;
     if (suggestionsMiniEl) suggestionsMiniEl.innerHTML = miniHtml;
+  }
+}
+
+function suggestNextMove() {
+  const transcript = liveState.transcript.map(t => t.text).join(' ').toLowerCase();
+  const suggestions = [];
+
+  if (transcript.includes('hello') || transcript.includes('hi') || transcript.includes('good morning')) {
+    suggestions.push(COACH_RESPONSES.opening);
+  }
+  if (transcript.includes('problem') || transcript.includes('challenge') || transcript.includes('issue') || transcript.includes('pain')) {
+    suggestions.push(COACH_RESPONSES.pain);
+  }
+  if (transcript.includes('budget') || transcript.includes('cost') || transcript.includes('price') || transcript.includes('invest')) {
+    suggestions.push(COACH_RESPONSES.investment);
+  }
+  if (transcript.includes('next step') || transcript.includes('move forward') || transcript.includes('ready to')) {
+    suggestions.push(COACH_RESPONSES.close);
+  }
+  if (transcript.includes('who') || transcript.includes('team') || transcript.includes('company') || transcript.includes('business')) {
+    suggestions.push(COACH_RESPONSES.qualification);
+  }
+
+  if (suggestions.length > 0) {
+    const latest = suggestions[suggestions.length - 1];
+    addLiveMessage(`💡 Suggested: ${latest.script}`, 'system');
   }
 }
 
