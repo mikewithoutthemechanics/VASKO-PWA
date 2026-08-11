@@ -7,7 +7,7 @@ const APP_SHELL = [
 ];
 
 const GITHUB_BASE = 'https://raw.githubusercontent.com/mikewithoutthemechanics/VASKO-SYSTEM/master/';
-const CACHE_NAME = 'vasko-v1';
+const CACHE_NAME = 'vasko-v2';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(

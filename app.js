@@ -43,6 +43,7 @@ let currentPath = '';
 let currentFile = '';
 let searchIndex = [];
 let isSearching = false;
+let contentEl, loadingStateEl, errorStateEl;
 
 function $(id) { return document.getElementById(id); }
 
@@ -189,14 +190,9 @@ async function loadFile(path) {
   currentFile = path;
   const url = `${GITHUB_RAW_BASE}${path}`;
   try {
-    const content = $('content');
-    const loadingState = $('loading-state');
-    const errorState = $('error-state');
-    content.innerHTML = '';
-    content.appendChild(loadingState);
-    loadingState.style.display = 'flex';
-    errorState.style.display = 'none';
-    content.classList.remove('loaded');
+    loadingStateEl.style.display = 'flex';
+    errorStateEl.style.display = 'none';
+    contentEl.classList.remove('loaded');
 
     const cached = localStorage.getItem(`vasko:${path}`);
     if (cached) {
@@ -216,13 +212,10 @@ async function loadFile(path) {
 }
 
 function renderMarkdown(text) {
-  const content = $('content');
-  const loadingState = $('loading-state');
-  loadingState.style.display = 'none';
-
+  loadingStateEl.style.display = 'none';
   const html = simpleMarkdown(text);
-  content.innerHTML = html;
-  content.classList.add('loaded');
+  contentEl.innerHTML = html;
+  contentEl.classList.add('loaded');
 }
 
 function simpleMarkdown(text) {
@@ -324,15 +317,12 @@ function renderFiles(filter = '') {
 }
 
 function showError(message) {
-  const content = $('content');
-  const loadingState = $('loading-state');
-  const errorState = $('error-state');
-  loadingState.style.display = 'none';
-  content.innerHTML = '';
-  content.appendChild(errorState);
+  loadingStateEl.style.display = 'none';
+  contentEl.innerHTML = '';
+  contentEl.appendChild(errorStateEl);
   $('error-message').textContent = message;
-  errorState.style.display = 'flex';
-  content.classList.add('loaded');
+  errorStateEl.style.display = 'flex';
+  contentEl.classList.add('loaded');
 }
 
 function updateActiveSection(sectionId) {
@@ -418,6 +408,10 @@ async function navigateToResult(sectionId, path) {
 function init() {
   renderSidebar();
   setTheme(getTheme());
+
+  contentEl = $('content');
+  loadingStateEl = $('loading-state');
+  errorStateEl = $('error-state');
 
   const toggle = $('sidebar-toggle');
   const sidebar = $('sidebar');
