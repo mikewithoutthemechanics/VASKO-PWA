@@ -168,6 +168,7 @@
       <button class="coach-tab active" data-tab="script">Script</button>
       <button class="coach-tab" data-tab="notes">Notes</button>
       <button class="coach-tab" data-tab="tools">Tools</button>
+      <button class="coach-tab" data-tab="live">Live Call</button>
     </div>
     <div class="coach-body">
       <div class="coach-tab-content active" id="tab-script">
@@ -226,6 +227,42 @@
           </div>
         </div>
       </div>
+      <div class="coach-tab-content" id="tab-live">
+        <div class="live-call" id="live-call">
+          <div class="live-status" id="live-status">
+            <span class="live-dot"></span>
+            <span class="live-text">Ready to listen</span>
+          </div>
+          <div class="live-transcript" id="live-transcript">
+            <p class="live-placeholder">Press "Start Listening" during your call. Your transcript will appear here in real time.</p>
+          </div>
+          <div class="live-suggestions" id="live-suggestions"></div>
+          <div class="live-controls">
+            <button class="coach-btn coach-btn-primary" id="live-start">Start Listening</button>
+            <button class="coach-btn coach-btn-secondary" id="live-stop" disabled>Stop</button>
+            <button class="coach-btn coach-btn-secondary" id="live-copy">Copy Last</button>
+            <button class="coach-btn coach-btn-secondary" id="live-pip">Picture-in-Picture</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="live-widget" id="live-widget">
+    <div class="live-widget-header">
+      <span class="live-widget-title">🎯 Live Coach</span>
+      <button class="live-widget-toggle" id="live-widget-toggle">−</button>
+    </div>
+    <div class="live-widget-body" id="live-widget-body">
+      <div class="live-transcript-mini" id="live-transcript-mini">
+        <p class="live-placeholder">Start listening to see live transcript here.</p>
+      </div>
+      <div class="live-suggestions-mini" id="live-suggestions-mini"></div>
+    </div>
+    <div class="live-widget-controls">
+      <button class="live-btn live-btn-primary" id="live-mini-start" title="Start listening">🎤</button>
+      <button class="live-btn live-btn-secondary" id="live-mini-stop" title="Stop listening" disabled>⏹</button>
+      <button class="live-btn live-btn-secondary" id="live-mini-copy" title="Copy last line">📋</button>
     </div>
   </div>
 

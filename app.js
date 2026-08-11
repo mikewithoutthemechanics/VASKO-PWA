@@ -1113,8 +1113,9 @@ function initCoach() {
   document.querySelectorAll('.coach-quick-reply').forEach(btn => {
     btn.addEventListener('click', () => {
       const reply = btn.dataset.reply;
+      copySuggestion(reply);
       addCoachMessage(reply, 'user');
-      showToast('Reply added to notes');
+      showToast('Copied to clipboard');
     });
   });
 
@@ -1124,6 +1125,7 @@ function initCoach() {
       const scenario = SCENARIOS.objection;
       const step = scenario.steps.find(s => s.title.toLowerCase().includes(objectionId.replace(/-/g, ' ')));
       if (step) {
+        copySuggestion(step.content.replace(/<[^>]*>/g, '').substring(0, 200));
         addCoachMessage(step.title, 'coach');
         const contentDiv = document.createElement('div');
         contentDiv.innerHTML = step.content;
@@ -1138,4 +1140,328 @@ function initCoach() {
   if (timerStart) timerStart.addEventListener('click', startCoachTimer);
   if (timerPause) timerPause.addEventListener('click', pauseCoachTimer);
   if (timerReset) timerReset.addEventListener('click', resetCoachTimer);
+
+  initLiveCall();
+}
+
+/* Live Call Mode */
+const LIVE_KEYWORDS = {
+  'expensive|cost|price|budget|afford': { title: 'Pricing Objection', content: 'Acknowledge → Reframe → Resolve. Move from cost to ROI.' },
+  'think about|think it over|need to think|let me think': { title: 'Stall Tactic', content: 'Set a decision deadline. "What specifically do you need to think about?"' },
+  'happy|current|satisfied|working fine|no problem': { title: 'Status Quo Bias', content: 'Validate, then contrast. Show the cost of staying the same.' },
+  'no budget|not in budget|cant afford|cannot afford': { title: 'Budget Constraint', content: 'Explore payment options. Show ROI vs cost of inaction.' },
+  'wrong time|bad timing|not now|busy': { title: 'Timing Objection', content: 'Respect the timeline. Set a specific follow-up date.' },
+  'competitor|other vendor|already using|alternatives': { title: 'Competitor Mention', content: 'Acknowledge, differentiate on speed and playbook depth.' },
+  'not sure|dont know|who decides|decision maker': { title: 'Decision Process', content: 'Map the decision process. Identify the economic buyer.' },
+  'contract|terms|agreement|legal': { title: 'Commercial Discussion', content: 'Move to proposal. Summarise value and next steps.' },
+  'demo|show me|how does it work|walk me': { title: 'Demo Request', content: 'Schedule demo. Focus on their specific pain points.' },
+  'team|reps|hiring|ramp|training': { title: 'Team Enablement', content: 'Highlight onboarding playbook and time-to-productivity.' }
+};
+
+let liveState = {
+  listening: false,
+  transcript: [],
+  lastUserText: '',
+  recognition: null
+};
+
+function initLiveCall() {
+  const liveStart = $('live-start');
+  const liveStop = $('live-stop');
+  const liveCopy = $('live-copy');
+  const livePip = $('live-pip');
+  const liveMiniStart = $('live-mini-start');
+  const liveMiniStop = $('live-mini-stop');
+  const liveMiniCopy = $('live-mini-copy');
+  const liveWidgetToggle = $('live-widget-toggle');
+  const liveWidget = $('live-widget');
+
+  if (liveStart) liveStart.addEventListener('click', startListening);
+  if (liveStop) liveStop.addEventListener('click', stopListening);
+  if (liveCopy) liveCopy.addEventListener('click', copyLastTranscriptLine);
+  if (livePip) livePip.addEventListener('click', requestPiP);
+
+  if (liveMiniStart) liveMiniStart.addEventListener('click', startListening);
+  if (liveMiniStop) liveMiniStop.addEventListener('click', stopListening);
+  if (liveMiniCopy) liveMiniCopy.addEventListener('click', copyLastTranscriptLine);
+
+  if (liveWidgetToggle) {
+    liveWidgetToggle.addEventListener('click', () => {
+      liveWidget.classList.toggle('collapsed');
+      liveWidgetToggle.textContent = liveWidget.classList.contains('collapsed') ? '+' : '−';
+    });
+  }
+
+  const chatBtn = $('chat-btn');
+  if (chatBtn) {
+    chatBtn.addEventListener('click', () => {
+      openCoach();
+      setTimeout(() => switchCoachTab('live'), 100);
+    });
+  }
+}
+
+function startListening() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    showToast('Speech recognition not supported in this browser');
+    return;
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  liveState.recognition = new SpeechRecognition();
+  liveState.recognition.continuous = true;
+  liveState.recognition.interimResults = true;
+  liveState.recognition.lang = 'en-US';
+
+  liveState.recognition.onstart = () => {
+    liveState.listening = true;
+    updateLiveUI(true);
+    showToast('Listening...');
+  };
+
+  liveState.recognition.onresult = (event) => {
+    let finalTranscript = '';
+    let interimTranscript = '';
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        finalTranscript += transcript + ' ';
+      } else {
+        interimTranscript += transcript;
+      }
+    }
+
+    if (finalTranscript) {
+      addLiveMessage(finalTranscript.trim(), 'user');
+      liveState.lastUserText = finalTranscript.trim();
+      detectKeywords(finalTranscript.trim());
+    }
+
+    if (interimTranscript) {
+      updateLiveInterim(interimTranscript);
+    }
+  };
+
+  liveState.recognition.onerror = (event) => {
+    console.error('Speech recognition error:', event.error);
+    if (event.error === 'not-allowed') {
+      showToast('Microphone access denied. Please allow microphone access.');
+    } else {
+      showToast('Listening error: ' + event.error);
+    }
+    stopListening();
+  };
+
+  liveState.recognition.onend = () => {
+    liveState.listening = false;
+    updateLiveUI(false);
+  };
+
+  liveState.recognition.start();
+}
+
+function stopListening() {
+  if (liveState.recognition) {
+    liveState.recognition.stop();
+    liveState.recognition = null;
+  }
+  liveState.listening = false;
+  updateLiveUI(false);
+}
+
+function updateLiveUI(isListening) {
+  const liveStart = $('live-start');
+  const liveStop = $('live-stop');
+  const liveMiniStart = $('live-mini-start');
+  const liveMiniStop = $('live-mini-stop');
+  const liveStatus = $('live-status');
+  const liveDot = liveStatus?.querySelector('.live-dot');
+  const liveText = liveStatus?.querySelector('.live-text');
+
+  if (liveStart) liveStart.disabled = isListening;
+  if (liveStop) liveStop.disabled = !isListening;
+  if (liveMiniStart) liveMiniStart.disabled = isListening;
+  if (liveMiniStop) liveMiniStop.disabled = !isListening;
+
+  if (liveStatus) {
+    liveStatus.classList.toggle('listening', isListening);
+    liveStatus.classList.toggle('processing', false);
+  }
+  if (liveDot) {
+    liveDot.style.background = isListening ? '#f87171' : 'var(--text-muted)';
+  }
+  if (liveText) {
+    liveText.textContent = isListening ? 'Listening...' : 'Ready to listen';
+  }
+}
+
+function addLiveMessage(text, type) {
+  const transcriptEl = $('live-transcript');
+  const transcriptMiniEl = $('live-transcript-mini');
+  const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  const msgHtml = `<div class="live-message ${type}">
+    <div class="live-time">${time}</div>
+    <div class="live-text-content">${escapeHtml(text)}</div>
+  </div>`;
+
+  if (transcriptEl) {
+    transcriptEl.insertAdjacentHTML('beforeend', msgHtml);
+    transcriptEl.scrollTop = transcriptEl.scrollHeight;
+  }
+
+  if (transcriptMiniEl) {
+    const miniMsg = document.createElement('div');
+    miniMsg.className = `live-message ${type}`;
+    miniMsg.innerHTML = `<div class="live-time">${time}</div><div class="live-text-content">${escapeHtml(text)}</div>`;
+    transcriptMiniEl.appendChild(miniMsg);
+    transcriptMiniEl.scrollTop = transcriptMiniEl.scrollHeight;
+  }
+
+  liveState.transcript.push({ text, type, time: Date.now() });
+}
+
+function updateLiveInterim(text) {
+  const transcriptEl = $('live-transcript');
+  const transcriptMiniEl = $('live-transcript-mini');
+
+  const interimHtml = `<div class="live-message user" id="live-interim">
+    <div class="live-time">${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+    <div class="live-text-content"><interim>${escapeHtml(text)}</interim></div>
+  </div>`;
+
+  const existingInterim = document.getElementById('live-interim');
+  if (existingInterim) existingInterim.remove();
+
+  if (transcriptEl) {
+    transcriptEl.insertAdjacentHTML('beforeend', interimHtml);
+    transcriptEl.scrollTop = transcriptEl.scrollHeight;
+  }
+
+  if (transcriptMiniEl) {
+    const miniInterim = document.createElement('div');
+    miniInterim.id = 'live-interim-mini';
+    miniInterim.className = 'live-message user';
+    miniInterim.innerHTML = `<div class="live-time">${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div><div class="live-text-content"><interim>${escapeHtml(text)}</interim></div>`;
+    transcriptMiniEl.appendChild(miniInterim);
+    transcriptMiniEl.scrollTop = transcriptMiniEl.scrollHeight;
+  }
+}
+
+function detectKeywords(text) {
+  const lower = text.toLowerCase();
+  const suggestions = [];
+
+  for (const [pattern, suggestion] of Object.entries(LIVE_KEYWORDS)) {
+    const regex = new RegExp(pattern, 'i');
+    if (regex.test(lower)) {
+      suggestions.push(suggestion);
+    }
+  }
+
+  const suggestionsEl = $('live-suggestions');
+  const suggestionsMiniEl = $('live-suggestions-mini');
+
+  if (suggestions.length > 0) {
+    const html = suggestions.map(s => `
+      <div class="live-suggestion" onclick="copySuggestion('${escapeHtml(s.title)}: ${escapeHtml(s.content)}')">
+        <div class="live-suggestion-title">${escapeHtml(s.title)}</div>
+        <div class="live-suggestion-content">${escapeHtml(s.content)}</div>
+      </div>
+    `).join('');
+
+    const miniHtml = suggestions.map(s => `
+      <div class="live-suggestion-mini" onclick="copySuggestion('${escapeHtml(s.title)}: ${escapeHtml(s.content)}')">
+        ${escapeHtml(s.title)}: ${escapeHtml(s.content.substring(0, 80))}${s.content.length > 80 ? '...' : ''}
+      </div>
+    `).join('');
+
+    if (suggestionsEl) suggestionsEl.innerHTML = html;
+    if (suggestionsMiniEl) suggestionsMiniEl.innerHTML = miniHtml;
+  }
+}
+
+function copySuggestion(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Copied to clipboard');
+  }).catch(() => {
+    showToast('Failed to copy');
+  });
+}
+
+function copyLastTranscriptLine() {
+  if (liveState.transcript.length === 0) {
+    showToast('No transcript to copy');
+    return;
+  }
+  const last = liveState.transcript[liveState.transcript.length - 1];
+  copySuggestion(last.text);
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+async function requestPiP() {
+  try {
+    if (document.pictureInPictureElement) {
+      await document.exitPictureInPicture();
+      showToast('Exited Picture-in-Picture');
+      return;
+    }
+
+    const video = document.createElement('video');
+    video.srcObject = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.play();
+
+    const stream = video.srcObject;
+    const canvas = document.createElement('canvas');
+    canvas.width = 320;
+    canvas.height = 180;
+    const ctx = canvas.getContext('2d');
+
+    function drawFrame() {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+      ctx.fillStyle = '#fff';
+      ctx.font = '12px sans-serif';
+      ctx.fillText('🎯 VASKO Live Coach', 10, canvas.height - 15);
+      requestAnimationFrame(drawFrame);
+    }
+    drawFrame();
+
+    const streamCanvas = canvas.captureStream(10);
+    const pipVideo = document.createElement('video');
+    pipVideo.srcObject = streamCanvas;
+    pipVideo.muted = true;
+    await pipVideo.play();
+
+    await pipVideo.requestPictureInPicture();
+    showToast('Picture-in-Picture mode enabled');
+
+    pipVideo.addEventListener('leavepictureinpicture', () => {
+      stream.getTracks().forEach(t => t.stop());
+      video.srcObject.getTracks().forEach(t => t.stop());
+    });
+  } catch (err) {
+    console.error('PiP error:', err);
+    showToast('Picture-in-Picture not supported or permission denied');
+  }
+}
+
+/* Coach Tab Switching */
+function switchCoachTab(tabId) {
+  document.querySelectorAll('.coach-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+  document.querySelectorAll('.coach-tab-content').forEach(c => c.classList.toggle('active', c.id === `tab-${tabId}`));
+
+  if (tabId === 'live') {
+    const liveWidget = $('live-widget');
+    if (liveWidget) {
+      liveWidget.classList.add('open');
+    }
+  }
 }
