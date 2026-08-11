@@ -48,6 +48,7 @@
         <div class="topbar-actions">
           <button class="icon-btn" id="bookmark-btn" title="Bookmark current page">☆</button>
           <button class="icon-btn" id="config-btn" title="Configure app">⚙️</button>
+          <button class="icon-btn" id="chat-btn" title="Sales Call Coach">💬</button>
         </div>
       </div>
       <div class="content-area">
@@ -143,6 +144,87 @@
         <button class="config-btn config-btn-secondary" id="config-import">Import Config</button>
         <button class="config-btn config-btn-danger" id="config-reset">Reset</button>
         <button class="config-btn config-btn-primary" id="config-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="coach-panel" id="coach-panel">
+    <div class="coach-header">
+      <div class="coach-title">🎯 Sales Coach</div>
+      <div class="coach-actions">
+        <select class="coach-scenario-select" id="coach-scenario">
+          <option value="">Select Scenario...</option>
+          <option value="discovery">Discovery Call</option>
+          <option value="cold-email">Cold Outreach</option>
+          <option value="objection">Objection Handling</option>
+          <option value="closing">Closing</option>
+          <option value="onboarding">Onboarding</option>
+          <option value="retention">Retention</option>
+        </select>
+        <button class="coach-close" id="coach-close">×</button>
+      </div>
+    </div>
+    <div class="coach-tabs">
+      <button class="coach-tab active" data-tab="script">Script</button>
+      <button class="coach-tab" data-tab="notes">Notes</button>
+      <button class="coach-tab" data-tab="tools">Tools</button>
+    </div>
+    <div class="coach-body">
+      <div class="coach-tab-content active" id="tab-script">
+        <div class="coach-step" id="coach-step">
+          <div class="coach-step-header">
+            <span class="coach-step-number">Step 1</span>
+            <span class="coach-step-title">Select a scenario to begin</span>
+          </div>
+          <div class="coach-step-content" id="coach-step-content">
+            <p>Choose a sales scenario from the dropdown above to get step-by-step guidance.</p>
+          </div>
+        </div>
+        <div class="coach-controls">
+          <button class="coach-btn" id="coach-prev" disabled>← Prev</button>
+          <button class="coach-btn coach-btn-primary" id="coach-next" disabled>Next →</button>
+        </div>
+      </div>
+      <div class="coach-tab-content" id="tab-notes">
+        <textarea class="coach-notes" id="coach-notes" placeholder="Take notes during the call here...&#10;&#10;• Key pain points&#10;• Budget discussed&#10;• Decision makers&#10;• Next steps"></textarea>
+        <button class="coach-btn coach-btn-secondary" id="coach-save-notes">Save Notes</button>
+      </div>
+      <div class="coach-tab-content" id="tab-tools">
+        <div class="coach-tools">
+          <div class="coach-tool-section">
+            <h4>Quick Replies</h4>
+            <div class="coach-quick-replies" id="coach-quick-replies">
+              <button class="coach-quick-reply" data-reply="Can you tell me more about that?">Tell me more</button>
+              <button class="coach-quick-reply" data-reply="That is a great question. Let me address that.">Great question</button>
+              <button class="coach-quick-reply" data-reply="What would that mean for your business?">What would that mean?</button>
+              <button class="coach-quick-reply" data-reply="How does that align with your priorities?">Align with priorities</button>
+              <button class="coach-quick-reply" data-reply="Let me share how we have solved that.">Share solution</button>
+              <button class="coach-quick-reply" data-reply="What is the impact of not solving this?">Impact of inaction</button>
+            </div>
+          </div>
+          <div class="coach-tool-section">
+            <h4>Objection Quick-Access</h4>
+            <div class="coach-objections" id="coach-objections">
+              <button class="coach-objection" data-objection="too-expensive">Too expensive</button>
+              <button class="coach-objection" data-objection="need-to-think">Need to think</button>
+              <button class="coach-objection" data-objection="happy-with-current">Happy with current</button>
+              <button class="coach-objection" data-objection="no-budget">No budget</button>
+              <button class="coach-objection" data-objection="timing">Wrong timing</button>
+              <button class="coach-objection" data-objection="competitor">Using competitor</button>
+            </div>
+          </div>
+          <div class="coach-tool-section">
+            <h4>Timer</h4>
+            <div class="coach-timer">
+              <div class="coach-timer-display" id="coach-timer">00:00</div>
+              <div class="coach-timer-controls">
+                <button class="coach-btn coach-btn-small" id="coach-timer-start">Start</button>
+                <button class="coach-btn coach-btn-small" id="coach-timer-pause">Pause</button>
+                <button class="coach-btn coach-btn-small" id="coach-timer-reset">Reset</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

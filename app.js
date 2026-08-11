@@ -676,6 +676,9 @@ function init() {
 
   configBtn.addEventListener('click', openConfig);
 
+  const chatBtn = $('chat-btn');
+  if (chatBtn) chatBtn.addEventListener('click', openCoach);
+
   document.getElementById('config-close').addEventListener('click', closeConfig);
   document.getElementById('config-modal-backdrop').addEventListener('click', closeConfig);
   document.getElementById('config-save').addEventListener('click', saveConfigFromModal);
@@ -706,6 +709,7 @@ function init() {
     if (e.key === 'Escape') {
       closeSearch();
       closeConfig();
+      closeCoach();
       sidebar.classList.remove('open');
       overlay.classList.remove('visible');
     }
@@ -714,6 +718,8 @@ function init() {
   window.addEventListener('online', () => showToast('Back online'));
   window.addEventListener('offline', () => showToast('You are offline'));
 
+  initCoach();
+
   loadFiles(getSections()[0]?.id || '01-BRAND');
 }
 
@@ -721,4 +727,415 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
   init();
+}
+
+const COACH_NOTES_KEY = 'vasko-coach-notes';
+const COACH_STATE_KEY = 'vasko-coach-state';
+
+const SCENARIOS = {
+  discovery: {
+    id: 'discovery',
+    name: 'Discovery Call',
+    icon: '🤝',
+    steps: [
+      {
+        title: 'Opening',
+        content: `<strong>You:</strong> "Hi [Name], thanks for making time. Before we dive in, is this still a good time for 30 minutes?"<br><br><strong>Goal:</strong> Confirm they have time and set the agenda.`,
+        tips: ['Keep it under 30 seconds', 'If they are rushed, offer to reschedule', 'Set expectation that you will respect their time']
+      },
+      {
+        title: 'Context Setting',
+        content: `<strong>You:</strong> "The goal today is to understand where you are losing revenue in your sales process, and whether VASKO is the right fix. If it is not, I will tell you and point you somewhere else. Does that sound fair?"<br><br><strong>Goal:</strong> Establish credibility and set the agenda.`,
+        tips: ['Be direct about your purpose', 'Give them an out if it is not a fit', 'Build trust through transparency']
+      },
+      {
+        title: 'Qualification - Metrics',
+        content: `<strong>You:</strong> "What does success look like for you this quarter?"<br><br><strong>Goal:</strong> Understand their goals and measure of success.`,
+        tips: ['Listen for specific numbers', 'Ask follow-up: "How would you know you achieved that?"', 'Note their exact words']
+      },
+      {
+        title: 'Qualification - Pain',
+        content: `<strong>You:</strong> "Tell me about the last deal you lost. What happened?"<br><br><strong>Goal:</strong> Uncover real pain points and emotional drivers.`,
+        tips: ['Silence is okay - let them fill it', 'Follow up: "How long has that been a problem?"', 'Follow up: "What have you tried to fix it?"', 'Follow up: "If you fixed it, what would change for you?"']
+      },
+      {
+        title: 'Pain Deep-Dive',
+        content: `<strong>You:</strong> "You mentioned [pain point]. Tell me more about that."<br><br><strong>Goal:</strong> Quantify the cost of the problem.`,
+        tips: ['Ask: "How much is that costing you per month?"', 'Ask: "Who else is affected by this?"', 'Get specific numbers - revenue, time, headcount']
+      },
+      {
+        title: 'Demo / Solution',
+        content: `<strong>You:</strong> "Based on what you have shared, I think the [Core/Prime/Pro] tier would be the right fit. Let me show you exactly how it would solve [specific pain]."<br><br><strong>Goal:</strong> Connect your solution directly to their pain.`,
+        tips: ['Reference their exact words from earlier', 'Show 2-3 specific features that map to their pain', 'Keep it under 5 minutes']
+      },
+      {
+        title: 'Investment',
+        content: `<strong>You:</strong> "For a team your size, the system typically sits at [Core/Prime/Pro]. The setup is [X], and the monthly engagement is [Y]. The way to think about it is: if this gets you one extra deal per month, it pays for itself 5x over."<br><br><strong>Goal:</strong> Frame investment as ROI, not cost.`,
+        tips: ['Use their industry benchmarks', 'Compare to cost of inaction', 'Pause after giving numbers - let them react']
+      },
+      {
+        title: 'Close',
+        content: `<strong>You:</strong> "Here is where I think we are. [Summarise pain + solution + investment]. Does that make sense?"<br><br><strong>Next step options:</strong><br>1. "I can have the full proposal to you by Thursday."<br>2. "Let us schedule a follow-up with your CFO."<br>3. "I will send you the Core tier pricing and we can go from there."<br><br><strong>You:</strong> "Which of those makes the most sense for you?"`,
+        tips: ['Always ask for a specific next step', 'Give 2-3 options, not an open-ended "what do you want?"', 'If they hesitate, use the urgency mechanism']
+      }
+    ]
+  },
+  'cold-email': {
+    id: 'cold-email',
+    name: 'Cold Outreach',
+    icon: '📣',
+    steps: [
+      {
+        title: 'Research',
+        content: `<strong>Before you call:</strong><br>• Review their LinkedIn profile<br>• Check company website for recent news<br>• Identify their role and reporting line<br>• Prepare one personalised insight<br><br><strong>Time:</strong> 5 minutes`,
+        tips: ['Look for recent hiring, funding, or expansion signals', 'Find a mutual connection if possible', 'Note any pain signals from their posts']
+      },
+      {
+        title: 'Opening',
+        content: `<strong>Pattern Interrupt:</strong><br>"Hi [Name], I am not going to sell you anything. I am going to tell you something uncomfortable. I looked at [Company]'s website. Your product is solid. But your sales process is leaking."<br><br><strong>Goal:</strong> Break through the generic pitch filter.`,
+        tips: ['Be bold but not rude', 'Reference something specific about them', 'Keep it under 20 seconds']
+      },
+      {
+        title: 'The Problem',
+        content: `<strong>You:</strong> "Most B2B companies lose 30-40% of their pipeline to inconsistent messaging, bad proposals, and slow follow-up. Not because the product is bad. Because the system is missing."<br><br><strong>Goal:</strong> Agitate the pain without attacking them personally.`,
+        tips: ['Use "most" not "you"', 'Make it about the category, not their failure', 'Stay curious, not judgmental']
+      },
+      {
+        title: 'The Solution',
+        content: `<strong>You:</strong> "I built VASKO for companies like yours. It is a complete sales system—brand, pricing, outreach, discovery scripts, proposals, onboarding. Everything you need to stop losing deals to the status quo."<br><br><strong>Goal:</strong> Position as the solution to their specific pain.`,
+        tips: ['Keep it to one sentence', 'Do not list every feature', 'Pause and let them respond']
+      },
+      {
+        title: 'The Ask',
+        content: `<strong>You:</strong> "I am not asking you to buy anything. I am asking for 15 minutes to show you exactly where you are leaking. Are you free [day] at [time]?"<br><br><strong>Goal:</strong> Get a meeting, not a sale.`,
+        tips: ['Specific time, not "when are you free?"', 'One option only - do not offer 5 times', 'If they say no, ask for a better time']
+      }
+    ]
+  },
+  objection: {
+    id: 'objection',
+    name: 'Objection Handling',
+    icon: '🛡️',
+    steps: [
+      {
+        title: 'Framework',
+        content: `<strong>Acknowledge → Reframe → Resolve</strong><br><br>1. <strong>Acknowledge</strong>: Validate the concern without being defensive.<br>2. <strong>Reframe</strong>: Shift context from cost to investment, or risk to control.<br>3. <strong>Resolve</strong>: Provide a specific next step or proof point.`,
+        tips: ['Never argue with the objection', 'Their objection is probably true - validate it', 'Your job is to reframe, not to win']
+      },
+      {
+        title: '"It is too expensive"',
+        content: `<strong>Acknowledge:</strong> "I hear you. R22,500/month is not a small commitment."<br><br><strong>Reframe:</strong> "What I want you to consider is the cost of not having a system. If your reps are wasting 10 hours a week on bad outreach, that is 40 hours of selling time lost. At R2,500/hour in deal value, that is R100,000/month in opportunity cost."<br><br><strong>Resolve:</strong> "Let us run the numbers together in the ROI calculator. If the math does not work, I will be the first to tell you."`,
+        tips: ['Never discount without asking for something in return', 'Use their numbers, not yours', 'Pivot to ROI, not features']
+      },
+      {
+        title: '"We have tried this before"',
+        content: `<strong>Acknowledge:</strong> "That is frustrating. And you are right—most sales systems fail."<br><br><strong>Reframe:</strong> "The difference here is that VASKO is not a tool you configure. It is a playbook we hand you, built from 500+ real sales conversations. You are not buying software. You are buying the process."<br><br><strong>Resolve:</strong> "Show me what you tried. I will show you why this is different."`,
+        tips: ['Ask what they tried - do not assume', 'Differentiate on implementation speed', 'Offer a pilot if trust is low']
+      },
+      {
+        title: '"We need to think about it"',
+        content: `<strong>Acknowledge:</strong> "Absolutely. This is a decision that affects your whole revenue operation."<br><br><strong>Reframe:</strong> "Thinking is good. But thinking without a deadline usually leads to doing nothing. What specifically do you need to think about?"<br><br><strong>Resolve:</strong> "Let us set a decision date. I will send you the full system preview by Thursday. If you have not decided by next Tuesday, I will follow up once—and then we both move on."`,
+        tips: ['Uncover the real objection behind "thinking"', 'Set a specific follow-up date', 'Do not chase indefinitely']
+      },
+      {
+        title: '"We do not have the bandwidth"',
+        content: `<strong>Acknowledge:</strong> "That is the most common concern I hear."<br><br><strong>Reframe:</strong> "The beauty of VASKO is that we do the heavy lifting. You do not need a project team. You need a champion who gives us 2 hours a week for 3 weeks. After that, we run the system for you."<br><br><strong>Resolve:</strong> "Who on your team could be that champion?"`,
+        tips: ['Minimise the time commitment', 'Offer to handle the heavy lifting', 'Identify the champion']
+      },
+      {
+        title: '"Your competitor is cheaper"',
+        content: `<strong>Acknowledge:</strong> "They might be. And that is fine."<br><br><strong>Reframe:</strong> "Cheaper usually means either less scope or lower quality. We do not compete on price. We compete on implementation speed and playbook depth."<br><br><strong>Resolve:</strong> "Let me show you what they are not giving you. [Show comparison chart]"`,
+        tips: ['Do not badmouth competitors', 'Focus on value, not price', 'Show the gaps in their offering']
+      }
+    ]
+  },
+  closing: {
+    id: 'closing',
+    name: 'Closing',
+    icon: '🎯',
+    steps: [
+      {
+        title: 'Recognising Buying Signals',
+        content: `<strong>Buying signals to watch for:</strong><br>• "What is the implementation timeline?"<br>• "Can we get started next week?"<br>• "Do you have a contract I can review?"<br>• "I need to check with my CFO"<br>• "What happens after we sign?"<br><br><strong>Action:</strong> When you hear these, move to close immediately. Do not keep selling.`,
+        tips: ['Buying signals are requests for logistics', 'The more specific the question, the hotter the lead', 'Do not answer logistics questions until you have committed']
+      },
+      {
+        title: 'The Assumptive Close',
+        content: `<strong>You:</strong> "Based on everything we have discussed, the Prime tier makes the most sense. I will have the proposal to you by Thursday. Does that work?"<br><br><strong>Goal:</strong> Move past "if" and into "when".`,
+        tips: ['Speak as if the decision is already made', 'If they push back, you can adjust', 'Confidence sells']
+      },
+      {
+        title: 'The Summary Close',
+        content: `<strong>You:</strong> "Let me summarise what we have agreed on. [Recap pain + solution + investment + next steps]. Are we aligned?"<br><br><strong>Goal:</strong> Confirm agreement before sending proposal.`,
+        tips: ['Use their exact words from earlier', 'Make it a confirmation, not a question', 'Write it down - send it in writing']
+      },
+      {
+        title: 'The Alternative Close',
+        content: `<strong>You:</strong> "Would you prefer to start with the Core tier and upgrade later, or go straight to Prime for the full system?"<br><br><strong>Goal:</strong> Give two yeses, not a yes/no.`,
+        tips: ['Both options should be good for you', 'Make the preferred option obvious', 'If they pick the lesser option, accept it']
+      },
+      {
+        title: 'Urgency Close',
+        content: `<strong>You:</strong> "Here is the honest truth: if you are not going to make a decision in the next 2 weeks, I should not take up more of your time. Not because I am pushy, but because I respect your calendar and my own."<br><br><strong>Goal:</strong> Create a decision deadline without fake scarcity.`,
+        tips: ['Only use real deadlines', 'Mean it - walk away if they delay', 'This separates serious buyers from tyre-kickers']
+      }
+    ]
+  },
+  onboarding: {
+    id: 'onboarding',
+    name: 'Client Onboarding',
+    icon: '🚀',
+    steps: [
+      {
+        title: 'Welcome Call',
+        content: `<strong>Agenda:</strong><br>1. Welcome and introductions<br>2. Review project timeline<br>3. Confirm stakeholder contacts<br>4. Set up shared workspace<br>5. Schedule weekly check-ins<br><br><strong>Duration:</strong> 30 minutes`,
+        tips: ['Send calendar invite within 1 hour', 'Share welcome pack before the call', 'Record the call for notes']
+      },
+      {
+        title: 'Discovery Session',
+        content: `<strong>Objective:</strong> Understand their business, market, and pain points.<br><br><strong>Key questions:</strong><br>• Walk me through your current sales process<br>• Where do you lose the most deals?<br>• What have you tried to fix this?<br>• What does success look like in 90 days?`,
+        tips: ['Record with permission', 'Ask for access to current materials', 'Identify the champion']
+      },
+      {
+        title: 'Build Phase',
+        content: `<strong>Your role:</strong><br>• Weekly check-ins (30 mins every Friday)<br>• Review drafts within 48 hours<br>• Provide feedback and approvals<br><br><strong>Our role:</strong><br>• Build the system<br>• Share drafts for review<br>• Incorporate feedback`,
+        tips: ['Set clear expectations for response times', 'Use shared docs for collaboration', 'Flag blockers immediately']
+      },
+      {
+        title: 'Review & Iterate',
+        content: `<strong>Process:</strong><br>1. We share the full draft<br>2. You review and add comments<br>3. We revise within 48 hours<br>4. Final approval required before go-live<br><br><strong>Rule:</strong> No more than 3 revision rounds per deliverable.`,
+        tips: ['Batch feedback - do not send piecemeal', 'Use specific examples when giving feedback', 'Approve or reject - do not leave it in limbo']
+      },
+      {
+        title: 'Go-Live',
+        content: `<strong>Launch day:</strong><br>• Team training session (1-2 hours)<br>• Load all assets into CRM/tools<br>• First sequence goes live<br>• Monitoring dashboard active<br><br><strong>Week 1:</strong> Daily standups, issue resolution, process refinement.`,
+        tips: ['Launch on a Tuesday or Wednesday', 'Have rollback plan ready', 'Celebrate the launch with the team']
+      }
+    ]
+  },
+  retention: {
+    id: 'retention',
+    name: 'Retention',
+    icon: '🔄',
+    steps: [
+      {
+        title: 'The Pulse Check',
+        content: `<strong>VASKO Pulse Survey (Month 1, 3, 6, 9, 12):</strong><br><br>1. On a scale of 1-10, how satisfied are you?<br>2. On a scale of 1-10, how likely are you to recommend us?<br>3. What is the one thing we could improve?<br>4. Which modules are you using? Which are you not?<br>5. Has your close rate changed since deploying VASKO?`,
+        tips: ['Send on the 1st of the month', 'Follow up within 7 days if no response', 'Score every response']
+      },
+      {
+        title: 'Promoter Action',
+        content: `<strong>NPS 9-10:</strong><br>• Ask for case study or testimonial<br>• Offer referral incentive<br>• Propose expansion (new modules, new markets)<br><br><strong>Script:</strong> "We are doing a case study on [Company]. Would you be open to a 20-minute chat about your experience?"`,
+        tips: ['Act within 48 hours while enthusiasm is high', 'Make the ask specific and time-bound', 'Offer value in return']
+      },
+      {
+        title: 'Passive Action',
+        content: `<strong>NPS 7-8:</strong><br>• Identify the one thing that would make them a 9<br>• Deliver that thing within 14 days<br>• Follow up with a satisfaction check<br><br><strong>Script:</strong> "You gave us a 7. What would it take to get you to a 9? I want to earn that."`,
+        tips: ['Do not ignore passives - they are one bad experience from churning', 'Be specific about the improvement', 'Follow through on the promise']
+      },
+      {
+        title: 'Detractor Rescue',
+        content: `<strong>NPS 0-6:</strong><br>• Schedule executive escalation call within 48 hours<br>• Conduct root cause analysis<br>• Present recovery plan within 7 days<br>• Weekly follow-up until score improves<br><br><strong>Script:</strong> "I see that you are not happy. I want to fix this. Can we schedule a call with our managing director to discuss what went wrong?"`,
+        tips: ['Move fast - detractors spread negative word-of-mouth', 'Do not make excuses - own the problem', 'Over-deliver on the recovery']
+      },
+      {
+        title: 'Expansion',
+        content: `<strong>When to expand:</strong><br>• Month 4: Review usage and identify gaps<br>• Month 6: Propose additional modules<br>• Month 9: Discuss new markets or verticals<br><br><strong>Script:</strong> "You are getting great results from the Core system. Based on your growth, I think Prime would unlock [specific value]. Want to see what that looks like?"`,
+        tips: ['Expand only after delivering value', 'Tie expansion to their success metrics', 'Offer a smooth upgrade path']
+      }
+    ]
+  }
+};
+
+let coachState = {
+  scenario: '',
+  step: 0,
+  notes: ''
+};
+
+function loadCoachState() {
+  try {
+    const saved = localStorage.getItem(COACH_STATE_KEY);
+    if (saved) coachState = { ...coachState, ...JSON.parse(saved) };
+  } catch {}
+}
+
+function saveCoachState() {
+  localStorage.setItem(COACH_STATE_KEY, JSON.stringify(coachState));
+}
+
+function loadCoachNotes() {
+  const notes = localStorage.getItem(COACH_NOTES_KEY);
+  if (notes) {
+    const notesEl = $('coach-notes');
+    if (notesEl) notesEl.value = notes;
+    coachState.notes = notes;
+  }
+}
+
+function saveCoachNotes() {
+  const notesEl = $('coach-notes');
+  if (notesEl) {
+    coachState.notes = notesEl.value;
+    localStorage.setItem(COACH_NOTES_KEY, notesEl.value);
+    showToast('Notes saved');
+  }
+}
+
+function openCoach() {
+  $('coach-panel').classList.add('open');
+  loadCoachState();
+  loadCoachNotes();
+  if (coachState.scenario) {
+    $('coach-scenario').value = coachState.scenario;
+    loadScenario(coachState.scenario);
+    goToStep(coachState.step);
+  }
+}
+
+function closeCoach() {
+  $('coach-panel').classList.remove('open');
+}
+
+function loadScenario(scenarioId) {
+  coachState.scenario = scenarioId;
+  coachState.step = 0;
+  saveCoachState();
+  renderCoachStep();
+}
+
+function goToStep(stepIndex) {
+  coachState.step = stepIndex;
+  saveCoachState();
+  renderCoachStep();
+}
+
+function renderCoachStep() {
+  const scenario = SCENARIOS[coachState.scenario];
+  const stepEl = $('coach-step');
+  const contentEl = $('coach-step-content');
+  const prevBtn = $('coach-prev');
+  const nextBtn = $('coach-next');
+
+  if (!scenario || !stepEl) return;
+
+  const step = scenario.steps[coachState.step];
+  if (!step) return;
+
+  stepEl.querySelector('.coach-step-number').textContent = `Step ${coachState.step + 1} of ${scenario.steps.length}`;
+  stepEl.querySelector('.coach-step-title').textContent = step.title;
+  contentEl.innerHTML = step.content + (step.tips ? `<div class="coach-tips"><strong>Tips:</strong><ul>${step.tips.map(t => `<li>${t}</li>`).join('')}</ul></div>` : '');
+
+  prevBtn.disabled = coachState.step === 0;
+  nextBtn.disabled = coachState.step >= scenario.steps.length - 1;
+  nextBtn.textContent = coachState.step >= scenario.steps.length - 1 ? 'Finish' : 'Next →';
+}
+
+function switchCoachTab(tabId) {
+  document.querySelectorAll('.coach-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+  document.querySelectorAll('.coach-tab-content').forEach(c => c.classList.toggle('active', c.id === `tab-${tabId}`));
+}
+
+function addCoachMessage(text, sender) {
+  const content = $('coach-step-content');
+  if (!content) return;
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'coach-message';
+  msgDiv.innerHTML = `<strong>${sender === 'user' ? 'You' : 'Coach'}:</strong> ${text}`;
+  content.appendChild(msgDiv);
+  content.scrollTop = content.scrollHeight;
+}
+
+let coachTimerInterval = null;
+let coachTimerSeconds = 0;
+
+function startCoachTimer() {
+  if (coachTimerInterval) return;
+  coachTimerInterval = setInterval(() => {
+    coachTimerSeconds++;
+    const mins = Math.floor(coachTimerSeconds / 60).toString().padStart(2, '0');
+    const secs = (coachTimerSeconds % 60).toString().padStart(2, '0');
+    const display = $('coach-timer');
+    if (display) display.textContent = `${mins}:${secs}`;
+  }, 1000);
+}
+
+function pauseCoachTimer() {
+  clearInterval(coachTimerInterval);
+  coachTimerInterval = null;
+}
+
+function resetCoachTimer() {
+  pauseCoachTimer();
+  coachTimerSeconds = 0;
+  const display = $('coach-timer');
+  if (display) display.textContent = '00:00';
+}
+
+function initCoach() {
+  const chatBtn = $('chat-btn');
+  const closeBtn = $('coach-close');
+  const scenarioSelect = $('coach-scenario');
+  const prevBtn = $('coach-prev');
+  const nextBtn = $('coach-next');
+  const saveNotesBtn = $('coach-save-notes');
+  const timerStart = $('coach-timer-start');
+  const timerPause = $('coach-timer-pause');
+  const timerReset = $('coach-timer-reset');
+
+  if (chatBtn) chatBtn.addEventListener('click', openCoach);
+  if (closeBtn) closeBtn.addEventListener('click', closeCoach);
+
+  if (scenarioSelect) {
+    scenarioSelect.addEventListener('change', (e) => {
+      if (e.target.value) loadScenario(e.target.value);
+    });
+  }
+
+  if (prevBtn) prevBtn.addEventListener('click', () => {
+    if (coachState.step > 0) goToStep(coachState.step - 1);
+  });
+
+  if (nextBtn) nextBtn.addEventListener('click', () => {
+    const scenario = SCENARIOS[coachState.scenario];
+    if (!scenario) return;
+    if (coachState.step < scenario.steps.length - 1) {
+      goToStep(coachState.step + 1);
+    } else {
+      showToast('Scenario complete! Great job.');
+    }
+  });
+
+  document.querySelectorAll('.coach-tab').forEach(tab => {
+    tab.addEventListener('click', () => switchCoachTab(tab.dataset.tab));
+  });
+
+  document.querySelectorAll('.coach-quick-reply').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const reply = btn.dataset.reply;
+      addCoachMessage(reply, 'user');
+      showToast('Reply added to notes');
+    });
+  });
+
+  document.querySelectorAll('.coach-objection').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const objectionId = btn.dataset.objection;
+      const scenario = SCENARIOS.objection;
+      const step = scenario.steps.find(s => s.title.toLowerCase().includes(objectionId.replace(/-/g, ' ')));
+      if (step) {
+        addCoachMessage(step.title, 'coach');
+        const contentDiv = document.createElement('div');
+        contentDiv.innerHTML = step.content;
+        const contentEl = $('coach-step-content');
+        if (contentEl) contentEl.appendChild(contentDiv);
+      }
+    });
+  });
+
+  if (saveNotesBtn) saveNotesBtn.addEventListener('click', saveCoachNotes);
+
+  if (timerStart) timerStart.addEventListener('click', startCoachTimer);
+  if (timerPause) timerPause.addEventListener('click', pauseCoachTimer);
+  if (timerReset) timerReset.addEventListener('click', resetCoachTimer);
 }
