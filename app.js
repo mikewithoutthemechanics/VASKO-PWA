@@ -1,4 +1,5 @@
-const GITHUB_BASE = 'https://raw.githubusercontent.com/mikewithoutthemechanics/VASKO-SYSTEM/master/';
+const GITHUB_API_BASE = 'https://api.github.com/repos/mikewithoutthemechanics/VASKO-SYSTEM/contents';
+const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/mikewithoutthemechanics/VASKO-SYSTEM/master/';
 const CACHE_KEY = 'vasko-cache-v2';
 const BOOKMARKS_KEY = 'vasko-bookmarks';
 const THEME_KEY = 'vasko-theme';
@@ -19,6 +20,23 @@ const SECTIONS = [
   { id: '13-OPERATIONS', name: 'Operations', icon: '⚙️', desc: 'Runbooks, continuity, risk' },
   { id: '14-MARKET-DATA', name: 'Market Data', icon: '📰', desc: 'Industry research and metrics' }
 ];
+
+const SECTION_FILES = {
+  '01-BRAND': ['brand-identity.md','category-positioning.md','messaging-hierarchy.md','voice-and-vocabulary.md','visual-identity-direction.md'],
+  '02-PRICING': ['sa-pricing-sheet-zar.md','international-pricing-usd-gbp.md','roi-reference-table.md','payment-terms.md','scope-boundaries.md','pricing-premium-policy.md'],
+  '03-SALES': ['sales-deck-version-a-prompt.md','sales-deck-version-b-prompt.md','discovery-call-script-version-a.md','discovery-call-script-version-b.md','objection-handling.md','urgency-mechanisms.md'],
+  '04-OUTREACH': ['cold-email-sa-zar.md','cold-email-uk-gbp.md','cold-email-us-usd.md','linkedin-scripts.md','whatsapp-scripts.md','outreach-research-checklist.md'],
+  '05-PROPOSALS': ['proposal-core-zar.md','proposal-pro-zar.md','proposal-core-usd.md','proposal-pro-usd.md'],
+  '06-NURTURE': ['cold-nurture-sequence-8-emails.md','warm-nurture-post-discovery-4-emails.md','re-engagement-sequence.md'],
+  '07-WEBSITE': ['homepage-copy.md','tier-page-prime.md','tier-page-core.md','tier-page-pro.md','tier-page-elite.md','about-page.md','faq-page.md'],
+  '08-ONBOARDING': ['welcome-pack.md','onboarding-questionnaire.md','kickoff-call-agenda.md','configuration-documents.md','testing-protocol.md','go-live-protocol.md','hypercare-schedule.md','engagement-protocol.md','staff-adoption-framework.md'],
+  '09-RETENTION': ['vasko-pulse-template-sa-zar.md','vasko-pulse-template-international.md','month-4-retention-protocol.md','escalation-protocol.md','cancellation-offboarding.md'],
+  '10-GROWTH': ['referral-programme-vasko-network.md','case-study-template.md','linkedin-profile-copy.md','linkedin-content-calendar-90-days.md','demand-generation-plan.md','competitive-moat-strategy.md','adjacent-vertical-expansion.md'],
+  '11-LEGAL': ['service-agreement-template.md','data-processing-agreement.md','privacy-policy.md','popia-registration-checklist.md','call-recording-consent.md'],
+  '12-FINANCE': ['pre-launch-financial-checklist.md','cash-flow-projection.md','cash-flow-management-rules.md','unit-economics.md','12-month-ramp-plan.md'],
+  '13-OPERATIONS': ['founder-incapacity-protocol.md','master-runbook-template.md','backup-operator-agreement.md','dependency-risk-mitigation.md','business-continuity-answer.md','early-adopter-positioning.md'],
+  '14-MARKET-DATA': ['industry-research-verified-metrics.md']
+};
 
 let currentFiles = [];
 let currentPath = '';
@@ -91,53 +109,42 @@ function toggleTheme() {
 async function buildSearchIndex() {
   const index = [];
   for (const section of SECTIONS) {
-    try {
-      const url = `${GITHUB_BASE}${section.id}/`;
-      const response = await fetch(url);
-      if (!response.ok) continue;
-      const text = await response.text();
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(text, 'text/html');
-      const links = Array.from(doc.querySelectorAll('a'))
-        .map(a => a.getAttribute('href'))
-        .filter(href => href && href.endsWith('.md') && !href.includes('../'));
+    const files = SECTION_FILES[section.id] || [];
+    for (const file of files) {
+      try {
+        const url = `${GITHUB_RAW_BASE}${section.id}/${file}`;
+        const cached = localStorage.getItem(`vasko:${section.id}/${file}`);
+        let content = cached;
+        if (!content) {
+          const response = await fetch(url);
+          if (!response.ok) continue;
+          content = await response.text();
+          localStorage.setItem(`vasko:${section.id}/${file}`, content);
+        }
+        const plainText = content
+          .replace(/^#{1,6}\s+.+$/gm, '')
+          .replace(/\*\*|__/g, '')
+          .replace(/\*|_/g, '')
+          .replace(/`/g, '')
+          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+          .replace(/^[-*]\s+/gm, '')
+          .replace(/^\d+\.\s+/gm, '')
+          .replace(/^>\s+/gm, '')
+          .replace(/^---$/gm, '')
+          .replace(/\n{2,}/g, ' ')
+          .trim();
 
-      for (const href of links) {
-        try {
-          const fileUrl = `${GITHUB_BASE}${href}`;
-          const cached = localStorage.getItem(`vasko:${href}`);
-          let content = cached;
-          if (!content) {
-            const fileResponse = await fetch(fileUrl);
-            if (!fileResponse.ok) continue;
-            content = await fileResponse.text();
-            localStorage.setItem(`vasko:${href}`, content);
-          }
-          const plainText = content
-            .replace(/^#{1,6}\s+.+$/gm, '')
-            .replace(/\*\*|__/g, '')
-            .replace(/\*|_/g, '')
-            .replace(/`/g, '')
-            .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-            .replace(/^[-*]\s+/gm, '')
-            .replace(/^\d+\.\s+/gm, '')
-            .replace(/^>\s+/gm, '')
-            .replace(/^---$/gm, '')
-            .replace(/\n{2,}/g, ' ')
-            .trim();
-
-          if (plainText.length > 10) {
-            index.push({
-              section: section.name,
-              sectionId: section.id,
-              path: href,
-              title: href.replace('.md', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-              content: plainText.substring(0, 500)
-            });
-          }
-        } catch (e) { continue; }
-      }
-    } catch (e) { continue; }
+        if (plainText.length > 10) {
+          index.push({
+            section: section.name,
+            sectionId: section.id,
+            path: `${section.id}/${file}`,
+            title: file.replace('.md', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            content: plainText.substring(0, 500)
+          });
+        }
+      } catch (e) { continue; }
+    }
   }
   searchIndex = index;
   return index;
@@ -167,32 +174,20 @@ async function searchContent(query) {
 
 async function loadFiles(sectionId) {
   currentPath = sectionId;
-  const url = `${GITHUB_BASE}${sectionId}/`;
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to load section');
-    const text = await response.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(text, 'text/html');
-    const links = Array.from(doc.querySelectorAll('a'))
-      .map(a => a.getAttribute('href'))
-      .filter(href => href && href.endsWith('.md') && !href.includes('../'));
-    currentFiles = links.map(href => ({
-      name: href.replace('.md', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      path: href
-    }));
-    renderFiles();
-    updateActiveSection(sectionId);
-    updateBreadcrumb(null, sectionId);
-    $('file-count').textContent = currentFiles.length;
-  } catch (err) {
-    showError(err.message);
-  }
+  const files = SECTION_FILES[sectionId] || [];
+  currentFiles = files.map(f => ({
+    name: f.replace('.md', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+    path: `${sectionId}/${f}`
+  }));
+  renderFiles();
+  updateActiveSection(sectionId);
+  updateBreadcrumb(null, sectionId);
+  $('file-count').textContent = currentFiles.length;
 }
 
 async function loadFile(path) {
   currentFile = path;
-  const url = `${GITHUB_BASE}${path}`;
+  const url = `${GITHUB_RAW_BASE}${path}`;
   try {
     const content = $('content');
     const loadingState = $('loading-state');
@@ -253,14 +248,10 @@ function simpleMarkdown(text) {
   });
 
   html = html.replace(/^\s*[-*]\s+(.+)$/gm, '<li>$1</li>');
+
   html = html.replace(/(<li>.*?<\/li>)/gs, (match) => {
-    return match.split('</li>').filter(s => s.trim()).map(s => s.trim() ? `<li>${s.replace(/^<li>/, '')}</li>` : '').join('');
-  });
-  html = html.replace(/(<li>.*?<\/li>)/gs, (match) => {
-    if (match.includes('<li>')) {
-      const items = match.match(/<li>.*?<\/li>/gs) || [];
-      return `<ul>${items.join('')}</ul>`;
-    }
+    const items = match.match(/<li>.*?<\/li>/gs) || [];
+    if (items.length > 0) return `<ul>${items.join('')}</ul>`;
     return match;
   });
 
@@ -352,7 +343,8 @@ function updateActiveSection(sectionId) {
 
 function updateActiveFile(path) {
   document.querySelectorAll('.file-item').forEach(btn => {
-    btn.classList.toggle('active', btn.getAttribute('onclick')?.includes(path));
+    const onclick = btn.getAttribute('onclick') || '';
+    btn.classList.toggle('active', onclick.includes(path));
   });
 }
 
