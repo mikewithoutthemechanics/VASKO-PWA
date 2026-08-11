@@ -6,7 +6,7 @@ const APP_SHELL = [
   '/manifest.json'
 ];
 
-const GITHUB_BASE = 'https://raw.githubusercontent.com/mikewithoutthemechanics/VASKO-SYSTEM/main/';
+const GITHUB_BASE = 'https://raw.githubusercontent.com/mikewithoutthemechanics/VASKO-SYSTEM/master/';
 const CACHE_NAME = 'vasko-v1';
 
 self.addEventListener('install', (e) => {

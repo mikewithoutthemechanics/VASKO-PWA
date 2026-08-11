@@ -1,4 +1,4 @@
-const GITHUB_BASE = 'https://raw.githubusercontent.com/mikewithoutthemechanics/VASKO-SYSTEM/main/';
+const GITHUB_BASE = 'https://raw.githubusercontent.com/mikewithoutthemechanics/VASKO-SYSTEM/master/';
 const CACHE_KEY = 'vasko-cache-v2';
 const BOOKMARKS_KEY = 'vasko-bookmarks';
 const THEME_KEY = 'vasko-theme';
