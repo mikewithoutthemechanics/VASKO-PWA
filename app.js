@@ -62,6 +62,12 @@ const DEFAULT_CONFIG = {
     name: 'VASKO-SYSTEM',
     branch: 'master'
   },
+  supabase: {
+    url: '',
+    key: '',
+    bucket: '',
+    enabled: false
+  },
   contact: {
     email: '',
     phone: '',
@@ -76,13 +82,25 @@ let currentFile = '';
 let searchIndex = [];
 let isSearching = false;
 let contentEl, loadingStateEl, errorStateEl;
+let isInitialized = false;
 
 function $(id) { return document.getElementById(id); }
 
 function loadConfig() {
   try {
     const saved = localStorage.getItem(CONFIG_KEY);
-    if (saved) return { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        ...DEFAULT_CONFIG,
+        ...parsed,
+        brand: { ...DEFAULT_CONFIG.brand, ...parsed.brand },
+        pricing: { ...DEFAULT_CONFIG.pricing, ...parsed.pricing },
+        repo: { ...DEFAULT_CONFIG.repo, ...parsed.repo },
+        supabase: { ...DEFAULT_CONFIG.supabase, ...parsed.supabase },
+        contact: { ...DEFAULT_CONFIG.contact, ...parsed.contact }
+      };
+    }
   } catch {}
   return { ...DEFAULT_CONFIG };
 }
@@ -170,6 +188,36 @@ function toggleTheme() {
   setTheme(current === 'dark' ? 'light' : 'dark');
 }
 
+async function fetchFile(path) {
+  // Try fetching from Supabase if configured & enabled
+  if (config.supabase && config.supabase.enabled && config.supabase.url && config.supabase.bucket) {
+    try {
+      const cleanUrl = config.supabase.url.replace(/\/$/, '');
+      const supabaseUrl = `${cleanUrl}/storage/v1/object/authenticated/${config.supabase.bucket}/${path}`;
+      const headers = {};
+      if (config.supabase.key) {
+        headers['apikey'] = config.supabase.key;
+        headers['Authorization'] = `Bearer ${config.supabase.key}`;
+      }
+
+      const response = await fetch(supabaseUrl, { headers });
+      if (response.ok) {
+        return await response.text();
+      } else {
+        console.warn(`Supabase fetch failed with status ${response.status}. Falling back to GitHub.`);
+      }
+    } catch (e) {
+      console.warn("Supabase fetch error, falling back to GitHub:", e);
+    }
+  }
+
+  // Fallback to GitHub
+  const url = `${getRepoBase()}${path}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Failed to load file');
+  return await response.text();
+}
+
 async function buildSearchIndex() {
   const index = [];
   const sections = getSections();
@@ -177,14 +225,12 @@ async function buildSearchIndex() {
     const files = SECTION_FILES[section.id] || [];
     for (const file of files) {
       try {
-        const url = `${getRepoBase()}${section.id}/${file}`;
-        const cached = localStorage.getItem(`vasko:${section.id}/${file}`);
+        const path = `${section.id}/${file}`;
+        const cached = localStorage.getItem(`vasko:${path}`);
         let content = cached;
         if (!content) {
-          const response = await fetch(url);
-          if (!response.ok) continue;
-          content = await response.text();
-          localStorage.setItem(`vasko:${section.id}/${file}`, content);
+          content = await fetchFile(path);
+          localStorage.setItem(`vasko:${path}`, content);
         }
         const plainText = content
           .replace(/^#{1,6}\s+.+$/gm, '')
@@ -203,7 +249,7 @@ async function buildSearchIndex() {
           index.push({
             section: section.name,
             sectionId: section.id,
-            path: `${section.id}/${file}`,
+            path: path,
             title: file.replace('.md', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
             content: plainText.substring(0, 500)
           });
@@ -252,7 +298,6 @@ async function loadFiles(sectionId) {
 
 async function loadFile(path) {
   currentFile = path;
-  const url = `${getRepoBase()}${path}`;
   try {
     loadingStateEl.style.display = 'flex';
     errorStateEl.style.display = 'none';
@@ -261,11 +306,11 @@ async function loadFile(path) {
     const cached = localStorage.getItem(`vasko:${path}`);
     if (cached) {
       renderMarkdown(cached);
+      updateBookmarkButton();
+      updateActiveFile(path);
       return;
     }
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to load file');
-    const text = await response.text();
+    const text = await fetchFile(path);
     localStorage.setItem(`vasko:${path}`, text);
     renderMarkdown(text);
   } catch (err) {
@@ -305,13 +350,6 @@ function simpleMarkdown(text) {
   });
 
   html = html.replace(/^\s*[-*]\s+(.+)$/gm, '<li>$1</li>');
-
-  html = html.replace(/(<li>.*?<\/li>)/gs, (match) => {
-    const items = match.match(/<li>.*?<\/li>/gs) || [];
-    if (items.length > 0) return `<ul>${items.join('')}</ul>`;
-    return match;
-  });
-
   html = html.replace(/^\s*\d+\.\s+(.+)$/gm, '<li>$1</li>');
 
   html = html.replace(/^\s*>\s+(.+)$/gm, '<blockquote>$1</blockquote>');
@@ -373,7 +411,7 @@ function renderFiles(filter = '') {
     : currentFiles;
 
   container.innerHTML = filtered.map(f => `
-    <button class="file-item ${f.path === currentFile ? 'active' : ''}" onclick="loadFile('${f.path}')">
+    <button class="file-item ${f.path === currentFile ? 'active' : ''}" data-path="${f.path}">
       <span class="file-icon">📄</span>
       <span class="file-name">${f.name}</span>
     </button>
@@ -419,7 +457,7 @@ function renderSidebar() {
   const container = $('section-list');
   const sections = getSections();
   container.innerHTML = sections.map(s => `
-    <button class="section-item" onclick="loadFiles('${s.id}')" data-section="${s.id}" title="${s.desc}">
+    <button class="section-item" data-section="${s.id}" title="${s.desc}">
       <span class="section-icon">${s.icon}</span>
       <span class="section-name">${s.name}</span>
     </button>
@@ -458,7 +496,7 @@ async function performSearch(query) {
   }
 
   resultsContainer.innerHTML = results.map(r => `
-    <button class="search-result-item" onclick="navigateToResult('${r.sectionId}', '${r.path}')">
+    <button class="search-result-item" data-section-id="${r.sectionId}" data-path="${r.path}">
       <span class="search-result-title">${r.section} › ${r.title}</span>
       <span class="search-result-context">${r.content.substring(0, 120)}...</span>
     </button>
@@ -483,6 +521,10 @@ function openConfig() {
   const repoOwnerInput = $('config-repo-owner');
   const repoNameInput = $('config-repo-name');
   const repoBranchInput = $('config-repo-branch');
+  const supabaseUrlInput = $('config-supabase-url');
+  const supabaseKeyInput = $('config-supabase-key');
+  const supabaseBucketInput = $('config-supabase-bucket');
+  const supabaseEnabledInput = $('config-supabase-enabled');
   const emailInput = $('config-email');
   const phoneInput = $('config-phone');
   const websiteInput = $('config-website');
@@ -497,6 +539,10 @@ function openConfig() {
   if (repoOwnerInput) repoOwnerInput.value = config.repo.owner;
   if (repoNameInput) repoNameInput.value = config.repo.name;
   if (repoBranchInput) repoBranchInput.value = config.repo.branch;
+  if (supabaseUrlInput) supabaseUrlInput.value = config.supabase?.url || '';
+  if (supabaseKeyInput) supabaseKeyInput.value = config.supabase?.key || '';
+  if (supabaseBucketInput) supabaseBucketInput.value = config.supabase?.bucket || '';
+  if (supabaseEnabledInput) supabaseEnabledInput.checked = !!config.supabase?.enabled;
   if (emailInput) emailInput.value = config.contact.email;
   if (phoneInput) phoneInput.value = config.contact.phone;
   if (websiteInput) websiteInput.value = config.contact.website;
@@ -556,6 +602,10 @@ function saveConfigFromModal() {
   const repoOwner = $('config-repo-owner')?.value || config.repo.owner;
   const repoName = $('config-repo-name')?.value || config.repo.name;
   const repoBranch = $('config-repo-branch')?.value || config.repo.branch;
+  const supabaseUrl = $('config-supabase-url')?.value || '';
+  const supabaseKey = $('config-supabase-key')?.value || '';
+  const supabaseBucket = $('config-supabase-bucket')?.value || '';
+  const supabaseEnabled = !!$('config-supabase-enabled')?.checked;
   const email = $('config-email')?.value || config.contact.email;
   const phone = $('config-phone')?.value || config.contact.phone;
   const website = $('config-website')?.value || config.contact.website;
@@ -580,6 +630,7 @@ function saveConfigFromModal() {
     sections: sections.length ? sections : config.sections,
     pricing: { currency, symbol, tiers },
     repo: { owner: repoOwner, name: repoName, branch: repoBranch },
+    supabase: { url: supabaseUrl, key: supabaseKey, bucket: supabaseBucket, enabled: supabaseEnabled },
     contact: { email, phone, website }
   });
 
@@ -641,6 +692,9 @@ function resetConfig() {
 }
 
 function init() {
+  if (isInitialized) return;
+  isInitialized = true;
+
   renderSidebar();
   setTheme(getTheme());
   applyConfig();
@@ -689,6 +743,41 @@ function init() {
 
   searchInput.addEventListener('focus', openSearch);
   searchInput.addEventListener('click', openSearch);
+
+  // Dynamic Event Delegation click listeners to prevent inline event listener breakout / XSS / logic issues
+  const sectionList = $('section-list');
+  if (sectionList) {
+    sectionList.addEventListener('click', (e) => {
+      const btn = e.target.closest('.section-item');
+      if (btn) {
+        const sectionId = btn.getAttribute('data-section');
+        if (sectionId) loadFiles(sectionId);
+      }
+    });
+  }
+
+  const fileList = $('file-list');
+  if (fileList) {
+    fileList.addEventListener('click', (e) => {
+      const btn = e.target.closest('.file-item');
+      if (btn) {
+        const path = btn.getAttribute('data-path');
+        if (path) loadFile(path);
+      }
+    });
+  }
+
+  const searchResults = $('search-results');
+  if (searchResults) {
+    searchResults.addEventListener('click', (e) => {
+      const btn = e.target.closest('.search-result-item');
+      if (btn) {
+        const sectionId = btn.getAttribute('data-section-id');
+        const path = btn.getAttribute('data-path');
+        if (sectionId && path) navigateToResult(sectionId, path);
+      }
+    });
+  }
 
   if (fileFilterInput) {
     fileFilterInput.addEventListener('input', (e) => {
@@ -1324,6 +1413,32 @@ function initLiveCall() {
     });
   }
 
+  const suggestionsEl = $('live-suggestions');
+  if (suggestionsEl) {
+    suggestionsEl.addEventListener('click', (e) => {
+      const item = e.target.closest('.live-suggestion');
+      if (item) {
+        const responseText = item.getAttribute('data-response');
+        if (responseText) {
+          copySuggestion(responseText);
+        }
+      }
+    });
+  }
+
+  const suggestionsMiniEl = $('live-suggestions-mini');
+  if (suggestionsMiniEl) {
+    suggestionsMiniEl.addEventListener('click', (e) => {
+      const item = e.target.closest('.live-suggestion-mini');
+      if (item) {
+        const responseText = item.getAttribute('data-response');
+        if (responseText) {
+          copySuggestion(responseText);
+        }
+      }
+    });
+  }
+
   initDealContext();
 }
 
@@ -1493,7 +1608,7 @@ function detectKeywords(text) {
   if (matched.length > 0) {
     const company = getDealContext('company');
     const industry = getDealContext('industry');
-    const dealSize = getDealContext('dealSize');
+    const dealSize = getDealContext('size');
     const pain = getDealContext('pain');
     const competitor = getDealContext('competitor');
 
@@ -1507,13 +1622,13 @@ function detectKeywords(text) {
         .replace(/\[Core\/Prime\/Pro\]/g, '[Core/Prime/Pro]')
         .replace(/\[day\]/g, 'Thursday')
         .replace(/\[price\]/g, 'R22,500/month')
-        .replace(/\[decision maker\]/g, getDealContext('decisionMaker') || 'your CFO')
+        .replace(/\[decision maker\]/g, getDealContext('decision-maker') || 'your CFO')
         .replace(/\[Competitor\]/g, competitor || 'your current tool')
         .replace(/\[what they do\]/g, 'automation and outreach');
     };
 
     const html = matched.map(s => `
-      <div class="live-suggestion" onclick="copySuggestion('${escapeHtml(personalize(s.response))}')">
+      <div class="live-suggestion" data-response="${escapeHtml(personalize(s.response))}">
         <div class="live-suggestion-title">${escapeHtml(s.title)}</div>
         <div class="live-suggestion-content">${escapeHtml(s.insight)}</div>
         <div class="live-suggestion-response">${escapeHtml(personalize(s.response.substring(0, 180)))}${s.response.length > 180 ? '...' : ''}</div>
@@ -1522,7 +1637,7 @@ function detectKeywords(text) {
     `).join('');
 
     const miniHtml = matched.map(s => `
-      <div class="live-suggestion-mini" onclick="copySuggestion('${escapeHtml(personalize(s.response))}')">
+      <div class="live-suggestion-mini" data-response="${escapeHtml(personalize(s.response))}">
         ${escapeHtml(s.title)}: ${escapeHtml(personalize(s.insight))}
       </div>
     `).join('');
@@ -1545,9 +1660,9 @@ function saveDealContext() {
   const context = {
     company: getDealContext('company'),
     industry: getDealContext('industry'),
-    dealSize: getDealContext('dealSize'),
+    size: getDealContext('size'),
     pain: getDealContext('pain'),
-    decisionMaker: getDealContext('decisionMaker'),
+    'decision-maker': getDealContext('decision-maker'),
     competitor: getDealContext('competitor')
   };
   localStorage.setItem('vasko-deal-context', JSON.stringify(context));
@@ -1586,7 +1701,7 @@ function logKeyMoment(category, text) {
 
 function initDealContext() {
   loadDealContext();
-  const fields = ['company', 'industry', 'dealSize', 'pain', 'decisionMaker', 'competitor'];
+  const fields = ['company', 'industry', 'size', 'pain', 'decision-maker', 'competitor'];
   fields.forEach(field => {
     const el = document.getElementById(`deal-${field}`);
     if (el) {
@@ -1628,8 +1743,8 @@ function suggestNextMove() {
     const latest = suggestions[suggestions.length - 1];
     const company = getDealContext('company');
     const pain = getDealContext('pain');
-    const dealSize = getDealContext('dealSize');
-    const decisionMaker = getDealContext('decisionMaker');
+    const dealSize = getDealContext('size');
+    const decisionMaker = getDealContext('decision-maker');
     const personalized = latest.script
       .replace(/\[Name\]/g, 'them')
       .replace(/\[specific task they mentioned\]/g, pain || 'the bottlenecks you described')
