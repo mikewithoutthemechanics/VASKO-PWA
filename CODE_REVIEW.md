@@ -329,12 +329,13 @@ Ensure all actionable elements use standard semantic tags (like `<button>` or `<
 
 | ID | Description | Severity | Target File | Status |
 |----|-------------|----------|-------------|--------|
-| SEC-01 | Raw Markdown XSS Insertion via `innerHTML` | **CRITICAL** | `app.js` | Open |
-| LOG-01 | Duplicated Event Listeners | **HIGH** | `app.js` | Open |
-| LOG-02 | Broken Markdown Parsing with regular expressions | **MEDIUM** | `app.js` | Open |
-| LOG-03 | Brittle Deal Context Mismatches (Wont Save) | **HIGH** | `app.js` / `index.html` | Open |
+| SEC-01 | Raw Markdown XSS Insertion via `innerHTML` | **CRITICAL** | `app.js` | **Fixed** |
+| LOG-01 | Duplicated Event Listeners | **HIGH** | `app.js` | **Fixed** |
+| LOG-02 | Broken Markdown Parsing with regular expressions | **MEDIUM** | `app.js` | **Fixed** |
+| LOG-03 | Brittle Deal Context Mismatches (Wont Save) | **HIGH** | `app.js` / `index.html` | **Fixed** |
 | PWA-01 | Stale Cache / App update locking | **MEDIUM** | `service-worker.js` | Open |
-| UI-01 | Mobile Notch Viewport Clipping | **LOW** | `styles.css` | Open |
+| UI-01 | Mobile Notch Viewport Clipping | **LOW** | `styles.css` | **Fixed** |
+| SUP-01 | Missing Supabase Integration Fallback | **HIGH** | `app.js` / `index.html` | **Fixed** |
 
 ---
 *Review compiled by Jules (AI Software Engineer).*

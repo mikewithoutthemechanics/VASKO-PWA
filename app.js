@@ -62,6 +62,12 @@ const DEFAULT_CONFIG = {
     name: 'VASKO-SYSTEM',
     branch: 'master'
   },
+  supabase: {
+    url: '',
+    key: '',
+    bucket: '',
+    enabled: false
+  },
   contact: {
     email: '',
     phone: '',
@@ -83,7 +89,18 @@ function $(id) { return document.getElementById(id); }
 function loadConfig() {
   try {
     const saved = localStorage.getItem(CONFIG_KEY);
-    if (saved) return { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        ...DEFAULT_CONFIG,
+        ...parsed,
+        brand: { ...DEFAULT_CONFIG.brand, ...parsed.brand },
+        pricing: { ...DEFAULT_CONFIG.pricing, ...parsed.pricing },
+        repo: { ...DEFAULT_CONFIG.repo, ...parsed.repo },
+        supabase: { ...DEFAULT_CONFIG.supabase, ...parsed.supabase },
+        contact: { ...DEFAULT_CONFIG.contact, ...parsed.contact }
+      };
+    }
   } catch {}
   return { ...DEFAULT_CONFIG };
 }
@@ -171,6 +188,36 @@ function toggleTheme() {
   setTheme(current === 'dark' ? 'light' : 'dark');
 }
 
+async function fetchFile(path) {
+  // Try fetching from Supabase if configured & enabled
+  if (config.supabase && config.supabase.enabled && config.supabase.url && config.supabase.bucket) {
+    try {
+      const cleanUrl = config.supabase.url.replace(/\/$/, '');
+      const supabaseUrl = `${cleanUrl}/storage/v1/object/authenticated/${config.supabase.bucket}/${path}`;
+      const headers = {};
+      if (config.supabase.key) {
+        headers['apikey'] = config.supabase.key;
+        headers['Authorization'] = `Bearer ${config.supabase.key}`;
+      }
+
+      const response = await fetch(supabaseUrl, { headers });
+      if (response.ok) {
+        return await response.text();
+      } else {
+        console.warn(`Supabase fetch failed with status ${response.status}. Falling back to GitHub.`);
+      }
+    } catch (e) {
+      console.warn("Supabase fetch error, falling back to GitHub:", e);
+    }
+  }
+
+  // Fallback to GitHub
+  const url = `${getRepoBase()}${path}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Failed to load file');
+  return await response.text();
+}
+
 async function buildSearchIndex() {
   const index = [];
   const sections = getSections();
@@ -178,14 +225,12 @@ async function buildSearchIndex() {
     const files = SECTION_FILES[section.id] || [];
     for (const file of files) {
       try {
-        const url = `${getRepoBase()}${section.id}/${file}`;
-        const cached = localStorage.getItem(`vasko:${section.id}/${file}`);
+        const path = `${section.id}/${file}`;
+        const cached = localStorage.getItem(`vasko:${path}`);
         let content = cached;
         if (!content) {
-          const response = await fetch(url);
-          if (!response.ok) continue;
-          content = await response.text();
-          localStorage.setItem(`vasko:${section.id}/${file}`, content);
+          content = await fetchFile(path);
+          localStorage.setItem(`vasko:${path}`, content);
         }
         const plainText = content
           .replace(/^#{1,6}\s+.+$/gm, '')
@@ -204,7 +249,7 @@ async function buildSearchIndex() {
           index.push({
             section: section.name,
             sectionId: section.id,
-            path: `${section.id}/${file}`,
+            path: path,
             title: file.replace('.md', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
             content: plainText.substring(0, 500)
           });
@@ -253,7 +298,6 @@ async function loadFiles(sectionId) {
 
 async function loadFile(path) {
   currentFile = path;
-  const url = `${getRepoBase()}${path}`;
   try {
     loadingStateEl.style.display = 'flex';
     errorStateEl.style.display = 'none';
@@ -262,11 +306,11 @@ async function loadFile(path) {
     const cached = localStorage.getItem(`vasko:${path}`);
     if (cached) {
       renderMarkdown(cached);
+      updateBookmarkButton();
+      updateActiveFile(path);
       return;
     }
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to load file');
-    const text = await response.text();
+    const text = await fetchFile(path);
     localStorage.setItem(`vasko:${path}`, text);
     renderMarkdown(text);
   } catch (err) {
@@ -477,6 +521,10 @@ function openConfig() {
   const repoOwnerInput = $('config-repo-owner');
   const repoNameInput = $('config-repo-name');
   const repoBranchInput = $('config-repo-branch');
+  const supabaseUrlInput = $('config-supabase-url');
+  const supabaseKeyInput = $('config-supabase-key');
+  const supabaseBucketInput = $('config-supabase-bucket');
+  const supabaseEnabledInput = $('config-supabase-enabled');
   const emailInput = $('config-email');
   const phoneInput = $('config-phone');
   const websiteInput = $('config-website');
@@ -491,6 +539,10 @@ function openConfig() {
   if (repoOwnerInput) repoOwnerInput.value = config.repo.owner;
   if (repoNameInput) repoNameInput.value = config.repo.name;
   if (repoBranchInput) repoBranchInput.value = config.repo.branch;
+  if (supabaseUrlInput) supabaseUrlInput.value = config.supabase?.url || '';
+  if (supabaseKeyInput) supabaseKeyInput.value = config.supabase?.key || '';
+  if (supabaseBucketInput) supabaseBucketInput.value = config.supabase?.bucket || '';
+  if (supabaseEnabledInput) supabaseEnabledInput.checked = !!config.supabase?.enabled;
   if (emailInput) emailInput.value = config.contact.email;
   if (phoneInput) phoneInput.value = config.contact.phone;
   if (websiteInput) websiteInput.value = config.contact.website;
@@ -550,6 +602,10 @@ function saveConfigFromModal() {
   const repoOwner = $('config-repo-owner')?.value || config.repo.owner;
   const repoName = $('config-repo-name')?.value || config.repo.name;
   const repoBranch = $('config-repo-branch')?.value || config.repo.branch;
+  const supabaseUrl = $('config-supabase-url')?.value || '';
+  const supabaseKey = $('config-supabase-key')?.value || '';
+  const supabaseBucket = $('config-supabase-bucket')?.value || '';
+  const supabaseEnabled = !!$('config-supabase-enabled')?.checked;
   const email = $('config-email')?.value || config.contact.email;
   const phone = $('config-phone')?.value || config.contact.phone;
   const website = $('config-website')?.value || config.contact.website;
@@ -574,6 +630,7 @@ function saveConfigFromModal() {
     sections: sections.length ? sections : config.sections,
     pricing: { currency, symbol, tiers },
     repo: { owner: repoOwner, name: repoName, branch: repoBranch },
+    supabase: { url: supabaseUrl, key: supabaseKey, bucket: supabaseBucket, enabled: supabaseEnabled },
     contact: { email, phone, website }
   });
 
